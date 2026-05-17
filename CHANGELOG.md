@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 — 2026-05-17
+
+- Update repository URLs to `ringo380/claude-cpanel-mcp` (avoids collision with an older unrelated `ringo380/cpanel-mcp` repo).
+
 ## 0.1.0 — 2026-05-17
 
 Initial release.
