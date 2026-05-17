@@ -35,9 +35,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ringo380/cpanel-mcp.git"
+    "url": "git+https://github.com/ringo380/claude-cpanel-mcp.git"
   },
-  "homepage": "https://github.com/ringo380/cpanel-mcp",
+  "homepage": "https://github.com/ringo380/claude-cpanel-mcp",
   "engines": {
     "node": ">=18"
   },

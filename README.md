@@ -20,7 +20,7 @@ MCP server for the cPanel UAPI, distributed as a Claude Code plugin. Manage emai
 
 ### Direct
 ```
-/plugin install ringo380/cpanel-mcp
+/plugin install ringo380/claude-cpanel-mcp
 ```
 
 ## Setup
@@ -77,8 +77,8 @@ If you do get locked out, sometimes connecting via the server's raw IP (set `CPA
 ## Develop
 
 ```bash
-git clone https://github.com/ringo380/cpanel-mcp.git
-cd cpanel-mcp
+git clone https://github.com/ringo380/claude-cpanel-mcp.git
+cd claude-cpanel-mcp
 npm install
 npm run build
 npm test
