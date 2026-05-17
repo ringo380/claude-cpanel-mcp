@@ -1,0 +1,55 @@
+{
+  "name": "@ringo380/cpanel-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the cPanel UAPI — manage email, DNS, files, MySQL, SSL, cron, subdomains, and more on shared cPanel hosting",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "cpanel-mcp": "dist/index.js",
+    "cpanel-mcp-setup": "dist/setup.js"
+  },
+  "files": [
+    "dist/",
+    "src/"
+  ],
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js dist/setup.js",
+    "prepare": "npm run build",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "cpanel",
+    "mcp",
+    "hosting",
+    "uapi",
+    "dns",
+    "email",
+    "mysql",
+    "ssl"
+  ],
+  "author": "Ryan Robson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ringo380/cpanel-mcp.git"
+  },
+  "homepage": "https://github.com/ringo380/cpanel-mcp",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.3",
+    "axios": "^1.7.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

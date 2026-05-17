@@ -1,0 +1,20 @@
+{
+  "name": "cpanel-mcp",
+  "version": "0.1.0",
+  "description": "cPanel UAPI MCP server bundled as a Claude Code plugin — manage email, DNS, files, MySQL, SSL, cron, subdomains, and more on shared cPanel hosting.",
+  "author": {
+    "name": "Ryan Robson"
+  },
+  "homepage": "https://github.com/ringo380/cpanel-mcp",
+  "repository": "https://github.com/ringo380/cpanel-mcp",
+  "license": "MIT",
+  "keywords": [
+    "cpanel",
+    "mcp",
+    "hosting",
+    "uapi",
+    "dns",
+    "email",
+    "mysql"
+  ]
+}

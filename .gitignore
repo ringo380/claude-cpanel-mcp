@@ -1,0 +1,12 @@
+node_modules/
+.env
+*.js.map
+CLAUDE.md
+**/CLAUDE.md
+CLAUDE.local.md
+.claude/
+memory/
+.browser-pilot/
+.claude-dev-helper/
+.plugin-config/
+.DS_Store
