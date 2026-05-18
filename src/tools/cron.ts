@@ -26,7 +26,7 @@ export function registerCronTools(server: McpServer, getClient: GetClient): void
   server.registerTool(
     'cron_add',
     {
-      description: 'Add a cron job. Wraps Cron::add_line.',
+      description: 'Add a cron job. Wraps Cron::add_line. NOTE: shell metacharacters in `command` (e.g. $VAR, backticks, `~`) are passed verbatim to cron and interpolated by the shell at job-run time, not now.',
       inputSchema: {
         command: z.string().describe('Shell command to run.'),
         minute: z.string().default('*').describe('Cron minute field. Default "*".'),

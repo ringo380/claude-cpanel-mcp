@@ -70,4 +70,3 @@ export function registerFileTools(server, getClient) {
         }
     });
 }
-//# sourceMappingURL=files.js.map

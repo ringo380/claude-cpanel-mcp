@@ -163,4 +163,3 @@ export const MODULES = [
     },
 ];
 export const MODULE_MAP = new Map(MODULES.map((m) => [m.name.toLowerCase(), m]));
-//# sourceMappingURL=modules-catalog.js.map

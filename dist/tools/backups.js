@@ -46,4 +46,3 @@ export function registerBackupTools(server, getClient) {
         }
     });
 }
-//# sourceMappingURL=backups.js.map

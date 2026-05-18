@@ -1,11 +1,13 @@
 #!/bin/sh
 # cpanel-mcp plugin launcher.
 #
-# Strategy:
-#   1. Prefer a globally installed `cpanel-mcp` binary if present.
-#   2. Fall back to running the bundled `dist/index.js` inside this plugin.
-#      If `node_modules/` is missing (fresh plugin clone), run a one-time
-#      `npm install --omit=dev` before launching.
+# Always runs the plugin's own bundled `dist/index.js` so that marketplace
+# updates take effect immediately. (Earlier versions preferred a globally
+# installed `cpanel-mcp` binary, but that silently masked plugin updates and
+# made debugging much harder.) If `node_modules/` is missing on a fresh
+# plugin clone, install production deps once before launching.
+#
+# Users who explicitly want the global binary can set CPANEL_MCP_USE_GLOBAL=1.
 #
 # All diagnostics go to stderr so they do not corrupt the stdio JSON-RPC
 # channel that the MCP host reads from stdout.
@@ -14,7 +16,8 @@ set -u
 
 : "${CLAUDE_PLUGIN_ROOT:=$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd)}"
 
-if command -v cpanel-mcp >/dev/null 2>&1; then
+if [ "${CPANEL_MCP_USE_GLOBAL:-}" = "1" ] && command -v cpanel-mcp >/dev/null 2>&1; then
+    echo "[cpanel-mcp] CPANEL_MCP_USE_GLOBAL=1, using global binary" 1>&2
     exec cpanel-mcp "$@"
 fi
 

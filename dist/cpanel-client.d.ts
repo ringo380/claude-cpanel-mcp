@@ -38,11 +38,18 @@ export declare class CpanelClient {
     /**
      * Call any cPanel UAPI endpoint.
      *
+     * Calls carrying password / key / cert / etc. params are auto-routed via POST
+     * to keep the values out of the request URL (cPanel logs request URLs to its
+     * access log). Callers can also force POST by passing `method: 'POST'`.
+     *
      * @param module   UAPI module (e.g. "Email", "DNS", "Mysql")
      * @param func     Function on that module (e.g. "list_pops")
-     * @param params   Query-string params; values are stringified
+     * @param params   UAPI params; values are stringified
+     * @param opts     { method?: 'GET' | 'POST' } — defaults to auto (POST iff sensitive)
      */
-    call<T = unknown>(module: string, func: string, params?: Record<string, string | number | boolean | undefined>): Promise<UapiResponse<T>>;
+    call<T = unknown>(module: string, func: string, params?: Record<string, string | number | boolean | undefined>, opts?: {
+        method?: 'GET' | 'POST';
+    }): Promise<UapiResponse<T>>;
     /** Last-4 of the token, safe for logging. */
     tokenSuffix(): string;
 }

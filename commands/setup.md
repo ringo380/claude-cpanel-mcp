@@ -72,6 +72,6 @@ Call read-only tools to confirm:
 
 ## Notes
 
-- Config load order: `process.env` > `~/.config/cpanel-mcp/.env` (env wins). Useful for one-off overrides without rewriting the file.
+- Config load order: `process.env` > `~/.config/cpanel-mcp/.env` (env wins). Note: the MCP host (Claude Code) captures env vars at server-launch time, not per-call, so changing an env var only takes effect after `/mcp` → reconnect `cpanel-mcp`. For mid-session credential changes, prefer calling the `setup` MCP tool — it updates the in-memory client immediately.
 - The token is stored on disk as plain text under mode 0600. Treat it like a password.
 - To revoke, delete the token in cPanel → Manage API Tokens, then re-run `/cpanel-mcp:setup` with a new one.

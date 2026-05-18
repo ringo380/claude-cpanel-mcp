@@ -24,7 +24,18 @@ import { registerSslTools } from './tools/ssl.js';
 import { registerCronTools } from './tools/cron.js';
 import { registerBackupTools } from './tools/backups.js';
 
-const VERSION = '0.1.0';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const PKG_PATH = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
+const VERSION: string = (() => {
+  try {
+    return JSON.parse(readFileSync(PKG_PATH, 'utf8')).version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+})();
 
 const initialConfig = readConfig();
 let clientRef: CpanelClient | null = initialConfig.ok
@@ -36,22 +47,22 @@ const setClient = (c: CpanelClient | null): void => {
   clientRef = c;
 };
 
-const UNCONFIGURED_INSTRUCTIONS =
-  'cpanel-mcp is not yet authenticated. Call the `setup` tool with your cPanel host, ' +
-  'user, and API token to validate and save credentials, or `auth_status` to diagnose. ' +
-  'You can generate an API token in cPanel → Security → Manage API Tokens. The full ' +
-  'tool suite (email, DNS, files, MySQL, SSL, cron, backups) is registered up-front but ' +
-  'all calls return an unconfigured error until setup succeeds.';
-
-const READY_INSTRUCTIONS =
-  'cpanel-mcp is authenticated. Manage email accounts, DNS records, files, MySQL, ' +
-  'SSL, cron, subdomains, and backups via the exposed tools. The `uapi_call` tool is ' +
-  'a universal escape hatch for any UAPI endpoint not covered by a curated tool. ' +
-  'Call `auth_status` to verify credentials, or `setup` to reconfigure.';
+// Neutral instructions valid in both unconfigured and configured states.
+// Auth state can change mid-session via the `setup` tool, but the server's
+// instructions string is captured at startup and not refreshed by the SDK,
+// so neither a hard "ready" nor "unconfigured" claim stays accurate.
+const INSTRUCTIONS =
+  'cpanel-mcp wraps the cPanel UAPI. Run `auth_status` to check whether credentials ' +
+  'are loaded; if not, run `setup` with host/user/api_key (generate the token in ' +
+  'cPanel → Security → Manage API Tokens). Once authenticated, use the curated tools ' +
+  '(email_*, dns_*, files_*, mysql_*, ssl_*, cron_*, backup_*, domains_*, subdomain_*) ' +
+  'or `uapi_call` for any UAPI module/function not wrapped. The HTTP layer is ' +
+  'cPHulk-safe: a single attempt per call, with `CPHULK_LOCKOUT` errors surfaced ' +
+  'distinctly from auth failures.';
 
 const server = new McpServer(
   { name: 'cpanel-mcp', version: VERSION },
-  { instructions: clientRef ? READY_INSTRUCTIONS : UNCONFIGURED_INSTRUCTIONS },
+  { instructions: INSTRUCTIONS },
 );
 
 // Setup tools are always available, regardless of state.

@@ -31,6 +31,32 @@ export class CPanelUapiError extends CPanelError {
         this.name = 'CPanelUapiError';
     }
 }
+/**
+ * Param keys whose values must never appear in a request URL — cPanel logs the
+ * full request line (including query string) to /usr/local/cpanel/logs/access_log.
+ * Any call carrying one of these keys is auto-routed via POST with a
+ * form-encoded body.
+ */
+const SENSITIVE_PARAM_KEYS = new Set([
+    'password',
+    'pass',
+    'passwd',
+    'newpass',
+    'key',
+    'cert',
+    'cabundle',
+    'api_key',
+    'apikey',
+    'token',
+    'secret',
+]);
+function hasSensitiveParam(params) {
+    for (const k of Object.keys(params)) {
+        if (SENSITIVE_PARAM_KEYS.has(k.toLowerCase()))
+            return true;
+    }
+    return false;
+}
 function looksLikeCphulk(status, body, contentType) {
     const lower = body.toLowerCase();
     // Strong signals: explicit cphulk / brute-force markers anywhere.
@@ -74,17 +100,24 @@ export class CpanelClient {
                 rejectUnauthorized: !cfg.insecureTls,
             }),
             // No retry. cPHulk-safe: a single attempt per call.
+            // validateStatus pinned to () => true so that 4xx/5xx flow through our
+            // cPHulk / auth dispatch instead of being thrown as axios errors.
             validateStatus: () => true,
         });
     }
     /**
      * Call any cPanel UAPI endpoint.
      *
+     * Calls carrying password / key / cert / etc. params are auto-routed via POST
+     * to keep the values out of the request URL (cPanel logs request URLs to its
+     * access log). Callers can also force POST by passing `method: 'POST'`.
+     *
      * @param module   UAPI module (e.g. "Email", "DNS", "Mysql")
      * @param func     Function on that module (e.g. "list_pops")
-     * @param params   Query-string params; values are stringified
+     * @param params   UAPI params; values are stringified
+     * @param opts     { method?: 'GET' | 'POST' } — defaults to auto (POST iff sensitive)
      */
-    async call(module, func, params = {}) {
+    async call(module, func, params = {}, opts = {}) {
         const cleanParams = {};
         for (const [k, v] of Object.entries(params)) {
             if (v === undefined || v === null)
@@ -92,9 +125,18 @@ export class CpanelClient {
             cleanParams[k] = String(v);
         }
         const url = `/execute/${encodeURIComponent(module)}/${encodeURIComponent(func)}`;
+        const method = opts.method ?? (hasSensitiveParam(cleanParams) ? 'POST' : 'GET');
         let response;
         try {
-            response = await this.http.get(url, { params: cleanParams });
+            if (method === 'POST') {
+                const body = new URLSearchParams(cleanParams).toString();
+                response = await this.http.post(url, body, {
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                });
+            }
+            else {
+                response = await this.http.get(url, { params: cleanParams });
+            }
         }
         catch (err) {
             const ax = err;
@@ -132,8 +174,9 @@ export class CpanelClient {
         if (parsed.status !== 1) {
             const errors = parsed.errors ?? ['Unknown UAPI error'];
             const joined = errors.join('; ');
-            // Some auth-related UAPI errors masquerade as status=0
-            if (/access denied|invalid|unauthorized|permission/i.test(joined)) {
+            // Some auth-related UAPI errors masquerade as status=0. Use word-boundary
+            // matches so "Invalid domain name" or "permission set" don't trip this.
+            if (/\baccess denied\b|\bunauthorized\b|\bpermission denied\b|\binvalid (?:api )?(?:token|key|credentials?)\b|\bauthentication (?:failed|required)\b/i.test(joined)) {
                 throw new CPanelAuthError(joined);
             }
             throw new CPanelUapiError(`UAPI ${module}::${func} failed: ${joined}`, errors);
@@ -145,4 +188,3 @@ export class CpanelClient {
         return this.apiKey.length >= 4 ? this.apiKey.slice(-4) : '****';
     }
 }
-//# sourceMappingURL=cpanel-client.js.map

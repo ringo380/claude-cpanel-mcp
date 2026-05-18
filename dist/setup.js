@@ -109,4 +109,3 @@ main().catch((err) => {
 });
 // Reference CONFIG_FILE so it isn't pruned by tree-shaking.
 void CONFIG_FILE;
-//# sourceMappingURL=setup.js.map

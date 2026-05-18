@@ -98,4 +98,3 @@ export function registerSetupTools(server, setClient, onConfigured) {
         };
     });
 }
-//# sourceMappingURL=setup.js.map

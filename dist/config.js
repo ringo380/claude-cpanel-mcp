@@ -113,4 +113,3 @@ export async function validateConfig(config) {
 export function tokenManagementUrl(host, port = 2083) {
     return `https://${host}:${port}/frontend/jupiter/security/tokens/index.html`;
 }
-//# sourceMappingURL=config.js.map

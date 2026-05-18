@@ -88,7 +88,7 @@ export function registerMysqlTools(server: McpServer, getClient: GetClient): voi
         database: z.string().describe('Full database name including the cPanel prefix.'),
         privileges: z
           .string()
-          .describe('Comma-separated MySQL privileges, e.g. "ALL PRIVILEGES" or "SELECT,INSERT,UPDATE".'),
+          .describe('Comma-separated MySQL privilege keywords WITHOUT the word "PRIVILEGES". For all privileges use "ALL" (not "ALL PRIVILEGES"). Examples: "ALL" or "SELECT,INSERT,UPDATE,DELETE".'),
       },
     },
     async ({ user, database, privileges }) => {

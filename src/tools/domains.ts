@@ -106,8 +106,8 @@ export function registerDomainTools(server: McpServer, getClient: GetClient): vo
       inputSchema: {
         newdomain: z.string().describe('Addon domain name, e.g. "newsite.com".'),
         subdomain: z.string().describe('Internal subdomain alias (cPanel always creates one).'),
+        pass: z.string().describe('FTP password for the co-located FTP account cPanel provisions for the addon. Required by UAPI.'),
         dir: z.string().optional().describe('Document root.'),
-        pass: z.string().optional().describe('FTP password for the addon (some hosts require this).'),
       },
     },
     async ({ newdomain, subdomain, dir, pass }) => {

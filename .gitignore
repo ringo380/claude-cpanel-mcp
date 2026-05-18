@@ -10,3 +10,4 @@ memory/
 .claude-dev-helper/
 .plugin-config/
 .DS_Store
+.code-review-*.md

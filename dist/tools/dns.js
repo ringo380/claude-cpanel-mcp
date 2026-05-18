@@ -107,4 +107,3 @@ export function registerDnsTools(server, getClient) {
         }
     });
 }
-//# sourceMappingURL=dns.js.map

@@ -21,7 +21,7 @@ export function registerEmailTools(server, getClient) {
             email: z.string().describe('Local part of the address (before @).'),
             domain: z.string().describe('Domain part.'),
             password: z.string().describe('Mailbox password.'),
-            quota: z.number().optional().describe('Mailbox quota in MB. 0 = unlimited. Defaults to 250.'),
+            quota: z.number().optional().describe('Mailbox quota in MB. If omitted, defaults to 250 MB. Pass 0 for unlimited.'),
         },
     }, async ({ email, domain, password, quota }) => {
         const client = getClient();
@@ -109,4 +109,3 @@ export function registerEmailTools(server, getClient) {
         }
     });
 }
-//# sourceMappingURL=email.js.map

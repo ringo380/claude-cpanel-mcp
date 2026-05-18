@@ -47,7 +47,7 @@ export function registerGenericTools(server: McpServer, getClient: GetClient): v
     'whoami',
     {
       description:
-        'Return the configured cPanel host, port, user, and last-4 of the API token. No network call. Use to verify credentials are present before issuing calls.',
+        'Return the configured cPanel host, port, user, and last-4 of the API token. No network call — for a live credential check call `auth_status`; for live account stats call `account_info`. Use this to verify which credentials are loaded.',
       inputSchema: {},
     },
     async () => {
