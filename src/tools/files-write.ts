@@ -14,11 +14,33 @@ type GetClient = () => CpanelClient | null;
  * Note: cPanel home dirs are typically /home/<user>, so user files always live
  * outside this list.
  */
-const DANGEROUS_PREFIXES = ['/', '/etc', '/var', '/usr', '/bin', '/sbin', '/boot', '/sys', '/proc', '/dev', '/lib', '/lib64', '/opt', '/root'];
+// Block writes under these roots AND their descendants (prefix match, not
+// exact-match). cPanel users normally work under /home/<user>, so this list
+// catches "obvious mistake" paths a long way before relying on cPanel's
+// server-side perm checks.
+const DANGEROUS_PREFIXES = [
+  '/etc',
+  '/var',
+  '/usr',
+  '/bin',
+  '/sbin',
+  '/boot',
+  '/sys',
+  '/proc',
+  '/dev',
+  '/lib',
+  '/lib64',
+  '/opt',
+  '/root',
+];
 
-function pathLooksDangerous(dir: string): boolean {
+export function pathLooksDangerous(dir: string): boolean {
   const normalized = dir.replace(/\/+$/, '') || '/';
-  return DANGEROUS_PREFIXES.includes(normalized);
+  if (normalized === '/') return true;
+  for (const root of DANGEROUS_PREFIXES) {
+    if (normalized === root || normalized.startsWith(`${root}/`)) return true;
+  }
+  return false;
 }
 
 function dangerousPathError(dir: string) {
@@ -29,10 +51,30 @@ function dangerousPathError(dir: string) {
         type: 'text' as const,
         text:
           `Refusing to operate on "${dir}" — this looks like a system path. ` +
-          `cPanel users normally work under /home/<user>. If you really mean it, ` +
-          `target a subdirectory explicitly (e.g. "/home/<user>/public_html").`,
+          `cPanel users normally work under /home/<user>. If you really need this, ` +
+          `call uapi_call directly with Fileman::<op> at your own risk.`,
       },
     ],
+  };
+}
+
+// Reject filename arguments that would let a caller escape `dir` via
+// traversal, embed null bytes (filesystem boundary truncation), or supply an
+// absolute path masquerading as a filename.
+export function validateFilename(file: string): string | null {
+  if (file.length === 0) return 'filename is empty';
+  if (file.includes('\0')) return 'filename contains a null byte';
+  if (file.includes('/') || file.includes('\\')) {
+    return 'filename must not contain "/" or "\\\\" — pass the directory in `dir` instead';
+  }
+  if (file === '.' || file === '..') return 'filename "." / ".." is not allowed';
+  return null;
+}
+
+function filenameError(reason: string) {
+  return {
+    isError: true,
+    content: [{ type: 'text' as const, text: `Refusing operation: ${reason}.` }],
   };
 }
 
@@ -56,6 +98,8 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
       const client = getClient();
       if (!client) return unconfiguredResult();
       if (pathLooksDangerous(dir)) return dangerousPathError(dir);
+      const nameErr = validateFilename(file);
+      if (nameErr) return filenameError(nameErr);
       try {
         const res = await client.call('Fileman', 'save_file_content', {
           dir,
@@ -85,6 +129,8 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
       const client = getClient();
       if (!client) return unconfiguredResult();
       if (pathLooksDangerous(path)) return dangerousPathError(path);
+      const nameErr = validateFilename(name);
+      if (nameErr) return filenameError(nameErr);
       try {
         const params: Record<string, string | number> = { path, name };
         if (permissions) params.permissions = permissions;
@@ -124,10 +170,14 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
         };
       }
       if (pathLooksDangerous(dir)) return dangerousPathError(dir);
-      const fileList = Array.isArray(files) ? files.join(',') : files;
+      const fileArr = Array.isArray(files) ? files : [files];
+      for (const f of fileArr) {
+        const nameErr = validateFilename(f);
+        if (nameErr) return filenameError(`${nameErr} ("${f}")`);
+      }
       try {
         return asJsonContent(
-          await client.call('Fileman', 'delete_files', { dir, files: fileList }),
+          await client.call('Fileman', 'delete_files', { dir, files: fileArr.join(',') }),
         );
       } catch (err) {
         return asErrorContent(err);
@@ -151,13 +201,17 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
       if (pathLooksDangerous(source_dir) || pathLooksDangerous(dest_dir)) {
         return dangerousPathError(pathLooksDangerous(source_dir) ? source_dir : dest_dir);
       }
-      const fileList = Array.isArray(files) ? files.join(',') : files;
+      const fileArr = Array.isArray(files) ? files : [files];
+      for (const f of fileArr) {
+        const nameErr = validateFilename(f);
+        if (nameErr) return filenameError(`${nameErr} ("${f}")`);
+      }
       try {
         return asJsonContent(
           await client.call('Fileman', 'move_files', {
             source_dir,
             dest_dir,
-            files: fileList,
+            files: fileArr.join(','),
           }),
         );
       } catch (err) {
@@ -182,13 +236,17 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
       if (pathLooksDangerous(source_dir) || pathLooksDangerous(dest_dir)) {
         return dangerousPathError(pathLooksDangerous(source_dir) ? source_dir : dest_dir);
       }
-      const fileList = Array.isArray(files) ? files.join(',') : files;
+      const fileArr = Array.isArray(files) ? files : [files];
+      for (const f of fileArr) {
+        const nameErr = validateFilename(f);
+        if (nameErr) return filenameError(`${nameErr} ("${f}")`);
+      }
       try {
         return asJsonContent(
           await client.call('Fileman', 'copy_files', {
             source_dir,
             dest_dir,
-            files: fileList,
+            files: fileArr.join(','),
           }),
         );
       } catch (err) {
@@ -211,10 +269,14 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
       const client = getClient();
       if (!client) return unconfiguredResult();
       if (pathLooksDangerous(dir)) return dangerousPathError(dir);
-      const fileList = Array.isArray(files) ? files.join(',') : files;
+      const fileArr = Array.isArray(files) ? files : [files];
+      for (const f of fileArr) {
+        const nameErr = validateFilename(f);
+        if (nameErr) return filenameError(`${nameErr} ("${f}")`);
+      }
       try {
         return asJsonContent(
-          await client.call('Fileman', 'chmod', { dir, files: fileList, permissions }),
+          await client.call('Fileman', 'chmod', { dir, files: fileArr.join(','), permissions }),
         );
       } catch (err) {
         return asErrorContent(err);

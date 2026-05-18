@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CpanelClient } from '../src/cpanel-client.js';
+import { pathLooksDangerous, validateFilename } from '../src/tools/files-write.js';
 
 const getMock = vi.fn();
 const postMock = vi.fn();
@@ -59,6 +60,29 @@ describe('files write tool routing', () => {
     await client.call('Ftp', 'passwd', { user: 'u', pass: 'secret' });
     expect(postMock).toHaveBeenCalledOnce();
     expect(getMock).not.toHaveBeenCalled();
+  });
+
+  it('pathLooksDangerous blocks system roots AND their descendants', () => {
+    expect(pathLooksDangerous('/')).toBe(true);
+    expect(pathLooksDangerous('/etc')).toBe(true);
+    expect(pathLooksDangerous('/etc/')).toBe(true);
+    expect(pathLooksDangerous('/etc/cron.d')).toBe(true);
+    expect(pathLooksDangerous('/usr/local/bin')).toBe(true);
+    expect(pathLooksDangerous('/root/.ssh')).toBe(true);
+    expect(pathLooksDangerous('/home/woobyava/public_html')).toBe(false);
+    expect(pathLooksDangerous('/home/woobyava')).toBe(false);
+  });
+
+  it('validateFilename rejects traversal, slashes, null bytes, dots, empty', () => {
+    expect(validateFilename('a.txt')).toBeNull();
+    expect(validateFilename('safe-name_2.json')).toBeNull();
+    expect(validateFilename('')).toMatch(/empty/);
+    expect(validateFilename('../etc/passwd')).toMatch(/"\/" or/);
+    expect(validateFilename('foo/bar')).toMatch(/"\/" or/);
+    expect(validateFilename('foo\\bar')).toMatch(/"\/" or/);
+    expect(validateFilename('foo\0.txt')).toMatch(/null byte/);
+    expect(validateFilename('.')).toMatch(/not allowed/);
+    expect(validateFilename('..')).toMatch(/not allowed/);
   });
 
   it('Mysql::set_password routes via POST', async () => {

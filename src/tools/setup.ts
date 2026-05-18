@@ -292,6 +292,12 @@ export function registerSetupTools(
       const config: CpanelConfig = { host, port, user, apiKey: api_key, insecureTls };
       const result = await validateConfigEphemeral(config);
       if (!result.ok) {
+        const cphulkWarning =
+          result.code === 'CPHULK_LOCKOUT'
+            ? `\n\n⚠ This was a CPHULK_LOCKOUT. DO NOT RETRY — repeated attempts extend ` +
+              `the lockout window. File a support ticket with the hosting provider to unblock, ` +
+              `or try again from a different IP (cPHulk is often hostname/IP-keyed).`
+            : '';
         return {
           isError: true,
           content: [
@@ -299,7 +305,8 @@ export function registerSetupTools(
               type: 'text' as const,
               text:
                 `Rotation REJECTED: new token failed validation [${result.code}] ${result.message}\n\n` +
-                `The existing token (...${oldSuffix}) is unchanged on disk and in memory.`,
+                `The existing token (...${oldSuffix}) is unchanged on disk and in memory.` +
+                cphulkWarning,
             },
           ],
         };

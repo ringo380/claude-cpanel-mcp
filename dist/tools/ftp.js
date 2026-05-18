@@ -101,10 +101,11 @@ export function registerFtpTools(server, getClient) {
         if (!client)
             return unconfiguredResult();
         try {
-            const [name, port] = await Promise.all([
-                client.call('Ftp', 'server_name'),
-                client.call('Ftp', 'get_port'),
-            ]);
+            // Sequential, not Promise.all: cPHulk-safe — a single failure on the
+            // first call short-circuits and we don't issue the second, which
+            // would otherwise double the cPHulk increment on stale creds.
+            const name = await client.call('Ftp', 'server_name');
+            const port = await client.call('Ftp', 'get_port');
             return asJsonContent({ server_name: name.data, port: port.data });
         }
         catch (err) {

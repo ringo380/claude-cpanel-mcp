@@ -34,9 +34,16 @@ All Release 0.2 invariants retained and tested:
 - Single attempt per call; distinct `CPHULK_LOCKOUT` vs `AUTH_FAILED` classification.
 - All new write tools register up-front and degrade to a structured "unconfigured" error when no creds are loaded.
 
+### Hardening (post-review)
+
+- `ftp_server_info`: switched from `Promise.all` to sequential calls. First failure short-circuits so a stale-creds AUTH_FAILED only counts once against cPHulk instead of twice.
+- `files-write` path guards: `pathLooksDangerous` now blocks system roots AND their descendants (prefix match, not exact-match) — `/etc/cron.d` and `/usr/local/bin` no longer slip through. Added `validateFilename` that rejects empty, traversal (`..`, `/`, `\\`), null bytes, and `.`/`..` for all single-file and array-of-files write tools.
+- `mysql_rename_database`: now requires `confirm: true` (matches the delete tools' pattern; rename breaks every app pointing at the old name).
+- `auth_rotate_token`: failure path now appends an explicit "DO NOT RETRY" warning when the cause was `CPHULK_LOCKOUT`, matching `auth_test`'s wording.
+
 ### Tests
 
-32 tests across 5 files (was 19). New coverage: profile round-trips, atomic writes, mode 0600, legacy migration, `auth_test` never touches disk, sensitive-param routing for new tools.
+34 tests across 5 files (was 19). New coverage: profile round-trips, atomic writes, mode 0600, legacy migration, `auth_test` never touches disk, sensitive-param routing for new tools, `pathLooksDangerous` prefix-match, `validateFilename` traversal/null-byte/empty rejection.
 
 ## 0.2.0 — 2026-05-17
 

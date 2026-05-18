@@ -111,15 +111,29 @@ export function registerMysqlTools(server, getClient) {
         }
     });
     server.registerTool('mysql_rename_database', {
-        description: 'Rename a MySQL database. Wraps Mysql::rename_database.',
+        description: 'Rename a MySQL database. DISRUPTIVE — every application connecting by the old name breaks until reconfigured. Wraps Mysql::rename_database.',
         inputSchema: {
             oldname: z.string().describe('Current full database name (with cPanel prefix).'),
             newname: z.string().describe('New full database name (with cPanel prefix).'),
+            confirm: z
+                .boolean()
+                .describe('Must be true. Acknowledges that connecting apps must be reconfigured.'),
         },
-    }, async ({ oldname, newname }) => {
+    }, async ({ oldname, newname, confirm }) => {
         const client = getClient();
         if (!client)
             return unconfiguredResult();
+        if (!confirm) {
+            return {
+                isError: true,
+                content: [
+                    {
+                        type: 'text',
+                        text: 'Refusing to rename: pass `confirm: true` to acknowledge apps connecting by the old name will break.',
+                    },
+                ],
+            };
+        }
         try {
             return asJsonContent(await client.call('Mysql', 'rename_database', { oldname, newname }));
         }
