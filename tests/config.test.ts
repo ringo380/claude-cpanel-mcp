@@ -45,15 +45,18 @@ describe('config', () => {
     expect(cfg.sources.CPANEL_HOST).toBe('env');
   });
 
-  it('writes config file and reads it back', async () => {
-    const { writeConfigFile, readConfig, CONFIG_FILE } = await import('../src/config.js');
+  it('writes config file (now profiles/default.env) and reads it back', async () => {
+    const { writeConfigFile, readConfig } = await import('../src/config.js');
+    const { profilesDir } = await import('../src/profiles.js');
     writeConfigFile({
       CPANEL_HOST: 'file.example.com',
       CPANEL_USER: 'fileuser',
       CPANEL_API_KEY: 'filetoken',
     });
-    // Confirm file mode is 0600
-    const stat = fs.statSync(CONFIG_FILE);
+    // Confirm file mode is 0600. profilesDir() reads $HOME at call time —
+    // do not import the PROFILES_DIR constant; it snapshots at module load.
+    const written = path.join(profilesDir(), 'default.env');
+    const stat = fs.statSync(written);
     expect(stat.mode & 0o777).toBe(0o600);
 
     const cfg = readConfig();

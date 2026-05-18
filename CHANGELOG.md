@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.3.0 — 2026-05-18
+
+Major coverage expansion and auth UX overhaul. No breaking changes to existing tools or env-var setup; the on-disk credential layout migrates automatically.
+
+### Auth UX
+
+- **Named profiles**: credentials now live under `~/.config/cpanel-mcp/profiles/<name>.env` (mode 0600, atomic temp+rename). Default profile name is `default`. Switch via `CPANEL_PROFILE` env var, the `auth_switch_profile` tool, or `/cpanel-mcp:account-switch`.
+- **Backward-compat migration**: existing `~/.config/cpanel-mcp/.env` is migrated to `profiles/default.env` on first read. The legacy file is left in place with a deprecation header for reference.
+- **New tools**:
+  - `auth_test` — dry-run credential validation without writing to disk.
+  - `auth_rotate_token` — atomically swap the API token for a profile, re-validating before commit.
+  - `auth_list_profiles` / `auth_switch_profile` / `auth_delete_profile` — multi-account management.
+  - `auth_open_token_page` — surface the cPanel token-management URL with step-by-step instructions and a suggested token name. Does not auto-open the browser (unsafe in headless/SSH).
+- **Setup tool** now accepts a `profile` arg and an `activate` flag.
+- **Server instructions** at startup now reflect configured/unconfigured state and the active profile (best-effort: SDK doesn't refresh mid-session).
+- **Slash commands** rewritten as state machines:
+  - `/cpanel-mcp:setup` now drives the full flow via `auth_status` → `auth_open_token_page` → `auth_test` → `setup`.
+  - `/cpanel-mcp:account-switch` (new) for picking among saved profiles.
+
+### Coverage additions
+
+- **Files (write)**: `files_write_file`, `files_create_directory`, `files_delete` (with confirm guard), `files_move`, `files_copy`, `files_chmod`, `files_compress`, `files_extract`. System-path guard rejects writes to `/`, `/etc`, `/var`, `/usr`, etc.
+- **MySQL**: `mysql_delete_database`, `mysql_delete_user`, `mysql_rename_database`, `mysql_change_user_password`, `mysql_revoke_privileges`.
+- **Email**: `email_list_autoresponders`, `email_add_autoresponder`, `email_delete_autoresponder`, `email_list_filters`, `email_delete_filter`, `email_delete_forwarder`, `email_get_disk_usage`.
+- **FTP** (new module): `ftp_list`, `ftp_add`, `ftp_delete`, `ftp_change_password`, `ftp_change_quota`, `ftp_server_info`.
+
+### Invariants
+
+All Release 0.2 invariants retained and tested:
+- POST routing for sensitive params (`password|pass|key|cert|cabundle|token|secret|...`).
+- `validateStatus: () => true` on the axios instance.
+- Single attempt per call; distinct `CPHULK_LOCKOUT` vs `AUTH_FAILED` classification.
+- All new write tools register up-front and degrade to a structured "unconfigured" error when no creds are loaded.
+
+### Tests
+
+32 tests across 5 files (was 19). New coverage: profile round-trips, atomic writes, mode 0600, legacy migration, `auth_test` never touches disk, sensitive-param routing for new tools.
+
 ## 0.2.0 — 2026-05-17
 
 Code-review fixes (no breaking changes for tool callers; one stricter param):

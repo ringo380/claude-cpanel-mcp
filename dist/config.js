@@ -1,40 +1,26 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { CpanelClient } from './cpanel-client.js';
-export const CONFIG_DIR = path.join(os.homedir(), '.config', 'cpanel-mcp');
-export const CONFIG_FILE = path.join(CONFIG_DIR, '.env');
-function parseEnvFile(content) {
-    const out = {};
-    for (const rawLine of content.split('\n')) {
-        const line = rawLine.trim();
-        if (!line || line.startsWith('#'))
-            continue;
-        const eq = line.indexOf('=');
-        if (eq === -1)
-            continue;
-        const key = line.slice(0, eq).trim();
-        let val = line.slice(eq + 1).trim();
-        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-            val = val.slice(1, -1);
-        }
-        out[key] = val;
-    }
-    return out;
-}
-/** Merge process.env over ~/.config/cpanel-mcp/.env (env wins). */
+import { ACTIVE_FILE, CONFIG_DIR, DEFAULT_PROFILE, LEGACY_CONFIG_FILE, PROFILES_DIR, getActiveProfileName, readProfile, writeProfileAtomic, } from './profiles.js';
+// Re-export so existing imports `from '../config.js'` keep working.
+export { CONFIG_DIR, LEGACY_CONFIG_FILE, PROFILES_DIR, ACTIVE_FILE };
+/** Back-compat alias: points to the legacy single-file path. */
+export const CONFIG_FILE = LEGACY_CONFIG_FILE;
+const FIELDS = ['CPANEL_HOST', 'CPANEL_PORT', 'CPANEL_USER', 'CPANEL_API_KEY', 'CPANEL_INSECURE_TLS'];
+/**
+ * Merge process.env over the active profile (env wins).
+ *
+ * Active profile is resolved via:
+ *   1. CPANEL_PROFILE env var (if set and valid)
+ *   2. ~/.config/cpanel-mcp/active file
+ *   3. "default"
+ *
+ * If the active profile is "default" and the legacy ~/.config/cpanel-mcp/.env
+ * file exists, it's migrated to profiles/default.env on first read.
+ */
 export function loadRawConfig() {
-    let fromFile = {};
-    try {
-        if (fs.existsSync(CONFIG_FILE)) {
-            fromFile = parseEnvFile(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        }
-    }
-    catch {
-        // Ignore — treat as no file.
-    }
+    const active = getActiveProfileName();
+    const fromFile = readProfile(active);
     const merged = { ...fromFile };
-    for (const k of ['CPANEL_HOST', 'CPANEL_PORT', 'CPANEL_USER', 'CPANEL_API_KEY', 'CPANEL_INSECURE_TLS']) {
+    for (const k of FIELDS) {
         const fromEnv = process.env[k];
         if (fromEnv && fromEnv.length > 0) {
             merged[k] = fromEnv;
@@ -43,19 +29,12 @@ export function loadRawConfig() {
     return merged;
 }
 export function readConfig() {
+    const profile = getActiveProfileName();
     const raw = loadRawConfig();
-    let fromFile = {};
-    try {
-        if (fs.existsSync(CONFIG_FILE)) {
-            fromFile = parseEnvFile(fs.readFileSync(CONFIG_FILE, 'utf8'));
-        }
-    }
-    catch {
-        // ignore
-    }
+    const fromFile = readProfile(profile);
     const sources = {};
-    const fields = ['CPANEL_HOST', 'CPANEL_USER', 'CPANEL_API_KEY'];
-    for (const f of fields) {
+    const required = ['CPANEL_HOST', 'CPANEL_USER', 'CPANEL_API_KEY'];
+    for (const f of required) {
         if (process.env[f])
             sources[f] = 'env';
         else if (fromFile[f])
@@ -63,9 +42,9 @@ export function readConfig() {
         else
             sources[f] = 'missing';
     }
-    const missing = fields.filter((f) => !raw[f]);
+    const missing = required.filter((f) => !raw[f]);
     if (missing.length > 0) {
-        return { ok: false, missing, sources };
+        return { ok: false, missing, sources, profile };
     }
     return {
         ok: true,
@@ -78,24 +57,25 @@ export function readConfig() {
         },
         missing: [],
         sources,
+        profile,
     };
 }
-export function writeConfigFile(values) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
-    const lines = [
-        `CPANEL_HOST=${values.CPANEL_HOST}`,
-        `CPANEL_PORT=${values.CPANEL_PORT ?? '2083'}`,
-        `CPANEL_USER=${values.CPANEL_USER}`,
-        `CPANEL_API_KEY=${values.CPANEL_API_KEY}`,
-    ];
-    if (values.CPANEL_INSECURE_TLS) {
-        lines.push(`CPANEL_INSECURE_TLS=${values.CPANEL_INSECURE_TLS}`);
-    }
-    fs.writeFileSync(CONFIG_FILE, lines.join('\n') + '\n', { mode: 0o600 });
-    fs.chmodSync(CONFIG_FILE, 0o600);
-    return CONFIG_FILE;
+/**
+ * Write credentials for a profile. Defaults to the active profile (or "default"
+ * if none is active yet). Atomic: temp file + rename, mode 0600.
+ *
+ * Does NOT switch the active profile. Callers wanting that (e.g. first-time
+ * setup, account switching) should also call setActiveProfile().
+ */
+export function writeConfigFile(values, profile) {
+    const name = profile ?? getActiveProfileName() ?? DEFAULT_PROFILE;
+    return writeProfileAtomic(name, values);
 }
-export async function validateConfig(config) {
+/**
+ * Validate credentials against UAPI without persisting anything to disk.
+ * Used by the auth_test tool for "try before save" flows.
+ */
+export async function validateConfigEphemeral(config) {
     const client = new CpanelClient(config);
     try {
         const result = await client.call('Variables', 'get_user_information');
@@ -110,6 +90,8 @@ export async function validateConfig(config) {
         };
     }
 }
+/** Back-compat alias used by existing setup tool. */
+export const validateConfig = validateConfigEphemeral;
 export function tokenManagementUrl(host, port = 2083) {
     return `https://${host}:${port}/frontend/jupiter/security/tokens/index.html`;
 }

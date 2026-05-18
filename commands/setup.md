@@ -1,77 +1,64 @@
 ---
-description: Guided first-run setup for cpanel-mcp — collect cPanel host, username, and API token, validate, and save to ~/.config/cpanel-mcp/.env.
+description: Guided interactive setup for cpanel-mcp — collect cPanel host, username, and API token, validate (dry-run), and save to a named profile.
 allowed-tools: ["Bash", "Read", "Write", "AskUserQuestion"]
 disable-model-invocation: true
 ---
 
 # /cpanel-mcp:setup
 
-Walk the user through end-to-end setup so they can go from "plugin enabled" to "issuing cPanel API calls from Claude Code" in one session.
+Drive a state-machine flow that takes the user from "plugin enabled" to "issuing cPanel API calls" entirely in chat. The MCP tools handle persistence; this command orchestrates the conversation.
 
-> cPanel does NOT support OAuth — authentication is via an API token the user creates inside the cPanel UI, then pastes back here. This command guides that flow.
+> cPanel does NOT support OAuth. Authentication is via an API token the user creates inside the cPanel UI and pastes back here.
 
-## Pre-flight
+## Step 1 — Diagnose current state
 
-1. Check whether a config already exists:
-   ```bash
-   test -f "$HOME/.config/cpanel-mcp/.env" && echo "EXISTS" || echo "MISSING"
-   ```
-   If `EXISTS`, ask the user whether to keep or overwrite before proceeding.
+Call `auth_status`. Branch on the result:
 
-2. Call the `auth_status` MCP tool to confirm current state and credential source.
+- **Already configured**: ask via `AskUserQuestion` whether they want to (a) add a new profile (multi-account setup), (b) rotate the token on the active profile (`auth_rotate_token`), or (c) abort. If (a), proceed to Step 2 with a fresh profile name. If (b), skip to Step 4 with `auth_rotate_token` instead of `setup`.
+- **Not configured**: proceed to Step 2 with profile name `"default"`.
 
-## What the user needs
+## Step 2 — Collect host + user
 
-Use `AskUserQuestion` to collect, one at a time:
+Use `AskUserQuestion`, one field at a time:
 
-1. **cPanel hostname** — what they put in the browser to reach `cPanel`. Examples: `web2.siteocity.com`, `cpanel.theirdomain.com`, or the server's raw IP. Strip any `https://` or trailing port.
+1. **cPanel hostname** — what they put in the browser to reach cPanel. Examples: `web2.siteocity.com`, `cpanel.theirdomain.com`, or the server's raw IP. Strip any `https://` or trailing port for them.
 2. **cPanel username** — their login name.
-3. **cPanel API token** — see "Generate the token" below.
+3. **(If adding a profile)** profile name — short kebab-case label like `siteocity` or `client-acme`. 1-64 chars of `[a-zA-Z0-9_.-]`.
 
-## Generate the token
+## Step 3 — Surface the token-creation URL
 
-Tell the user to:
+Call `auth_open_token_page(host=<host>)`. Relay the URL and the numbered steps it returns to the user.
 
-1. Log into cPanel at `https://<host>:2083/` in a browser.
-2. Search the cPanel home page for **"Manage API Tokens"** (or go directly to `https://<host>:2083/frontend/jupiter/security/tokens/index.html`).
-3. Click **Create**, give it a name like `claude-code-mcp`, leave privileges at the default (full access), and copy the token shown — it is displayed exactly once.
+> If they report "Manage API Tokens" is missing from cPanel, the hosting provider has it disabled. Stop here and tell them to file a support ticket.
 
-> Note: many shared hosts limit API token features. If "Manage API Tokens" is missing from cPanel, ask the hosting provider's support team to enable it for the account.
+Ask them to paste the token back in chat. Treat the pasted value as opaque — never log or echo it back in full.
 
-## Install credentials
+## Step 4 — Dry-run validate
 
-Offer two setup styles:
+Call `auth_test(host=<host>, user=<user>, api_key=<token>)`. **This does NOT write to disk.**
 
-### Option A — MCP `setup` tool (recommended)
+Branch on result:
 
-Call the `setup` MCP tool with the collected values:
+- **OK**: proceed to Step 5.
+- **`CPHULK_LOCKOUT`**: stop. Tell the user their IP is blocked, instruct them to file a hosting-provider ticket, and offer to retry once unblocked. Suggest trying the server's raw IP instead of hostname (cPHulk is often hostname-keyed). Do NOT retry automatically — repeated attempts extend the lockout.
+- **`AUTH_FAILED`**: ask whether the token is fresh (cPanel sometimes shows the token only once and pasting can lose characters). Loop back to Step 3 with a regenerated token.
+- **`NETWORK_ERROR`**: confirm host and port (default 2083); ask whether the host uses a self-signed cert (offer `insecure_tls=true`).
 
-```
-setup(host="<host>", user="<user>", api_key="<token>")
-```
+## Step 5 — Persist
 
-The tool validates by calling `Variables::get_user_information` against the cPanel UAPI; on success it writes `~/.config/cpanel-mcp/.env` (mode 0600) and immediately marks the session as authenticated — every other cPanel tool becomes usable without a restart.
+Call `setup(host=..., user=..., api_key=..., profile=<name>)`. The tool re-validates (idempotent) then writes atomically to `~/.config/cpanel-mcp/profiles/<name>.env` (mode 0600) and activates the profile.
 
-If validation fails with `CPHULK_LOCKOUT`, the user's IP has been blocked by cPHulk brute-force protection. They must file a ticket with the hosting provider to clear it; retrying will only extend the lockout window. Direct-IP `:2083` access sometimes bypasses hostname-keyed cPHulk rules — offer to retry `setup` with the server's raw IP as `host`.
+## Step 6 — Verify
 
-### Option B — Standalone CLI
+Call lightweight read-only tools to confirm the session is live:
 
-Requires a local clone and global install (`git clone …/cpanel-mcp && cd cpanel-mcp && npm install -g .`). Then:
-```bash
-cpanel-mcp-setup
-```
-Input is hidden for the token. After it finishes, ask the user to reconnect the MCP server (`/mcp` → reconnect `cpanel-mcp`).
+- `whoami` — host, user, last-4 of token.
+- `account_info` — account stats (disk, bandwidth, etc.).
+- `email_list_accounts` — sanity check that a write-capable tool resolves.
 
-## Verify
+## Notes for the operator
 
-Call read-only tools to confirm:
-
-- `whoami` — shows host, user, and last-4 of the token.
-- `account_info` — returns cPanel sidebar stats (disk, bandwidth, etc.).
-- `email_list_accounts` — lists email accounts.
-
-## Notes
-
-- Config load order: `process.env` > `~/.config/cpanel-mcp/.env` (env wins). Note: the MCP host (Claude Code) captures env vars at server-launch time, not per-call, so changing an env var only takes effect after `/mcp` → reconnect `cpanel-mcp`. For mid-session credential changes, prefer calling the `setup` MCP tool — it updates the in-memory client immediately.
-- The token is stored on disk as plain text under mode 0600. Treat it like a password.
-- To revoke, delete the token in cPanel → Manage API Tokens, then re-run `/cpanel-mcp:setup` with a new one.
+- For mid-session credential changes, prefer `setup` / `auth_rotate_token` / `auth_switch_profile` over editing files or env vars — they refresh the in-memory client immediately. Env-var changes only take effect after `/mcp` → reconnect `cpanel-mcp`.
+- Tokens are stored as plain text under mode 0600. Treat them like passwords.
+- To revoke a token, delete it in cPanel → Manage API Tokens, then either run this command again (to install a new one) or call `auth_rotate_token` directly with the replacement.
+- Multi-account: re-invoke this command with a fresh profile name. Switch between accounts with `auth_switch_profile` or `/cpanel-mcp:account-switch`.

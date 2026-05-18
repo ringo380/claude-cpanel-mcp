@@ -14,15 +14,18 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CpanelClient } from './cpanel-client.js';
 import { readConfig } from './config.js';
 import { registerSetupTools } from './tools/setup.js';
+import { registerAuthHelperTools } from './tools/auth-helpers.js';
 import { registerGenericTools } from './tools/generic.js';
 import { registerEmailTools } from './tools/email.js';
 import { registerDnsTools } from './tools/dns.js';
 import { registerFileTools } from './tools/files.js';
+import { registerFileWriteTools } from './tools/files-write.js';
 import { registerMysqlTools } from './tools/mysql.js';
 import { registerDomainTools } from './tools/domains.js';
 import { registerSslTools } from './tools/ssl.js';
 import { registerCronTools } from './tools/cron.js';
 import { registerBackupTools } from './tools/backups.js';
+import { registerFtpTools } from './tools/ftp.js';
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -47,28 +50,45 @@ const setClient = (c: CpanelClient | null): void => {
   clientRef = c;
 };
 
-// Neutral instructions valid in both unconfigured and configured states.
-// Auth state can change mid-session via the `setup` tool, but the server's
-// instructions string is captured at startup and not refreshed by the SDK,
-// so neither a hard "ready" nor "unconfigured" claim stays accurate.
-const INSTRUCTIONS =
-  'cpanel-mcp wraps the cPanel UAPI. Run `auth_status` to check whether credentials ' +
-  'are loaded; if not, run `setup` with host/user/api_key (generate the token in ' +
-  'cPanel → Security → Manage API Tokens). Once authenticated, use the curated tools ' +
-  '(email_*, dns_*, files_*, mysql_*, ssl_*, cron_*, backup_*, domains_*, subdomain_*) ' +
-  'or `uapi_call` for any UAPI module/function not wrapped. The HTTP layer is ' +
-  'cPHulk-safe: a single attempt per call, with `CPHULK_LOCKOUT` errors surfaced ' +
-  'distinctly from auth failures.';
+// Build instructions reflecting startup-time state. The SDK doesn't refresh
+// `instructions` mid-session, so this is a best-effort hint baked in at
+// connect time; runtime state can drift if profiles/setup tools are used.
+function buildInstructions(): string {
+  const base =
+    'cpanel-mcp wraps the cPanel UAPI with curated tools plus a generic `uapi_call` escape hatch. ' +
+    'Authenticates via cPanel API tokens; supports multiple named profiles ' +
+    '(see auth_list_profiles / auth_switch_profile / /cpanel-mcp:account-switch). ' +
+    'The HTTP layer is cPHulk-safe: a single attempt per call, CPHULK_LOCKOUT errors ' +
+    'surfaced distinctly from AUTH_FAILED. Sensitive params (password|key|cert|...) ' +
+    'auto-route via POST so they never appear in cPanel access logs.';
+  if (initialConfig.ok) {
+    return (
+      base +
+      ` Configured at startup: profile="${initialConfig.profile}", ` +
+      `user="${initialConfig.config!.user}", host="${initialConfig.config!.host}:${initialConfig.config!.port}". ` +
+      'Tool families available: email_*, dns_*, files_*, mysql_*, ssl_*, cron_*, ' +
+      'backup_*, domains_*, subdomain_*, ftp_*, plus uapi_call.'
+    );
+  }
+  return (
+    base +
+    ` ⚠ NO CREDENTIALS LOADED at startup (active profile "${initialConfig.profile}" missing: ` +
+    `${initialConfig.missing.join(', ')}). Start by calling \`auth_status\` for diagnostics, ` +
+    'then either invoke /cpanel-mcp:setup for a guided flow, or call `auth_test` to dry-run ' +
+    'a host/user/token combination before committing it with `setup`.'
+  );
+}
 
 const server = new McpServer(
   { name: 'cpanel-mcp', version: VERSION },
-  { instructions: INSTRUCTIONS },
+  { instructions: buildInstructions() },
 );
 
-// Setup tools are always available, regardless of state.
+// Setup + auth-helper tools are always available, regardless of state.
 registerSetupTools(server, setClient, () => {
   /* tools are already registered up-front; nothing to do post-config */
 });
+registerAuthHelperTools(server);
 
 // Register all tools up-front. Each handler checks getClient() and returns
 // a structured "unconfigured" error if credentials are missing. This keeps
@@ -78,11 +98,13 @@ registerGenericTools(server, getClient);
 registerEmailTools(server, getClient);
 registerDnsTools(server, getClient);
 registerFileTools(server, getClient);
+registerFileWriteTools(server, getClient);
 registerMysqlTools(server, getClient);
 registerDomainTools(server, getClient);
 registerSslTools(server, getClient);
 registerCronTools(server, getClient);
 registerBackupTools(server, getClient);
+registerFtpTools(server, getClient);
 
 // Insurance against orphan stdio processes.
 process.stdin.on('end', () => process.exit(0));
