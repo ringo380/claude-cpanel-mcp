@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 — 2026-05-19
+
+Dependency hygiene. No runtime behavior changes.
+
+- Bump `vitest` from ^2.0.0 to ^4.1.6 (skips v3 line entirely).
+- Transitive: esbuild 0.21.5 → 0.28.0.
+- Closes the two moderate npm-audit vulnerabilities GitHub flagged after v0.3.0; `npm audit` is now clean.
+- All 34 tests pass unchanged on vitest 4.
+
 ## 0.3.0 — 2026-05-18
 
 Major coverage expansion and auth UX overhaul. No breaking changes to existing tools or env-var setup; the on-disk credential layout migrates automatically.
