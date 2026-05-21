@@ -2,7 +2,7 @@
   "mcpServers": {
     "cpanel-mcp": {
       "type": "stdio",
-      "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/launch-mcp.sh",
+      "command": "${CLAUDE_PLUGIN_ROOT:-.}/hooks/scripts/launch-mcp.sh",
       "args": [],
       "env": {
         "CPANEL_HOST": "${CPANEL_HOST:-}",
