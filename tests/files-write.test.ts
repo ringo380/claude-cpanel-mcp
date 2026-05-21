@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CpanelClient } from '../src/cpanel-client.js';
-import { pathLooksDangerous, validateFilename } from '../src/tools/files-write.js';
+import {
+  pathLooksDangerous,
+  validateFilename,
+  registerFileWriteTools,
+} from '../src/tools/files-write.js';
 
 const getMock = vi.fn();
 const postMock = vi.fn();
@@ -94,5 +98,136 @@ describe('files write tool routing', () => {
     const client = new CpanelClient(baseConfig);
     await client.call('Mysql', 'set_password', { user: 'u', password: 'secret' });
     expect(postMock).toHaveBeenCalledOnce();
+  });
+});
+
+// Mutation tools must hit API 2 Fileman::fileop, not the (nonexistent) UAPI
+// Fileman functions. Register the tools against a stub server + stub client and
+// assert the callApi2 arguments per op.
+describe('file-mutation tools route through API 2 fileop', () => {
+  type Handler = (args: Record<string, unknown>) => Promise<unknown>;
+  const handlers = new Map<string, Handler>();
+  const callApi2 = vi.fn().mockResolvedValue({ cpanelresult: { event: { result: 1 }, data: [] } });
+  const call = vi.fn();
+
+  beforeEach(() => {
+    handlers.clear();
+    callApi2.mockClear();
+    call.mockClear();
+    const server = {
+      registerTool: (name: string, _cfg: unknown, handler: Handler) => handlers.set(name, handler),
+    };
+    const client = { call, callApi2 } as unknown as CpanelClient;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    registerFileWriteTools(server as any, () => client);
+  });
+
+  it('files_delete → op=unlink with joined full paths', async () => {
+    await handlers.get('files_delete')!({
+      dir: '/home/u/public_html',
+      files: ['a.txt', 'b.txt'],
+      confirm: true,
+    });
+    expect(callApi2).toHaveBeenCalledWith('Fileman', 'fileop', {
+      op: 'unlink',
+      sourcefiles: '/home/u/public_html/a.txt,/home/u/public_html/b.txt',
+      doubledecode: 1,
+    });
+  });
+
+  it('files_delete refuses without confirm and never calls the API', async () => {
+    const res = (await handlers.get('files_delete')!({
+      dir: '/home/u',
+      files: 'a.txt',
+      confirm: false,
+    })) as { isError?: boolean };
+    expect(res.isError).toBe(true);
+    expect(callApi2).not.toHaveBeenCalled();
+  });
+
+  it('files_delete blocks system paths before any API call', async () => {
+    const res = (await handlers.get('files_delete')!({
+      dir: '/etc',
+      files: 'passwd',
+      confirm: true,
+    })) as { isError?: boolean };
+    expect(res.isError).toBe(true);
+    expect(callApi2).not.toHaveBeenCalled();
+  });
+
+  it('files_move → op=move with sourcefiles + destfiles', async () => {
+    await handlers.get('files_move')!({
+      source_dir: '/home/u/a',
+      dest_dir: '/home/u/b',
+      files: 'x.txt',
+    });
+    expect(callApi2).toHaveBeenCalledWith('Fileman', 'fileop', {
+      op: 'move',
+      sourcefiles: '/home/u/a/x.txt',
+      destfiles: '/home/u/b',
+      doubledecode: 1,
+    });
+  });
+
+  it('files_copy → op=copy with sourcefiles + destfiles', async () => {
+    await handlers.get('files_copy')!({
+      source_dir: '/home/u/a',
+      dest_dir: '/home/u/b',
+      files: ['x.txt', 'y.txt'],
+    });
+    expect(callApi2).toHaveBeenCalledWith('Fileman', 'fileop', {
+      op: 'copy',
+      sourcefiles: '/home/u/a/x.txt,/home/u/a/y.txt',
+      destfiles: '/home/u/b',
+      doubledecode: 1,
+    });
+  });
+
+  it('files_chmod → op=chmod with permissions in metadata', async () => {
+    await handlers.get('files_chmod')!({
+      dir: '/home/u',
+      files: 'x.sh',
+      permissions: '0755',
+    });
+    expect(callApi2).toHaveBeenCalledWith('Fileman', 'fileop', {
+      op: 'chmod',
+      sourcefiles: '/home/u/x.sh',
+      metadata: '0755',
+      doubledecode: 1,
+    });
+  });
+
+  it('files_compress → op=compress with type in metadata', async () => {
+    await handlers.get('files_compress')!({
+      sources: ['/home/u/a', '/home/u/b'],
+      destination: '/home/u/out.zip',
+      type: 'zip',
+    });
+    expect(callApi2).toHaveBeenCalledWith('Fileman', 'fileop', {
+      op: 'compress',
+      sourcefiles: '/home/u/a,/home/u/b',
+      destfiles: '/home/u/out.zip',
+      metadata: 'zip',
+      doubledecode: 1,
+    });
+  });
+
+  it('files_extract → op=extract with destfiles', async () => {
+    await handlers.get('files_extract')!({
+      sources: ['/home/u/out.zip'],
+      destination: '/home/u/dest',
+    });
+    expect(callApi2).toHaveBeenCalledWith('Fileman', 'fileop', {
+      op: 'extract',
+      sourcefiles: '/home/u/out.zip',
+      destfiles: '/home/u/dest',
+      doubledecode: 1,
+    });
+  });
+
+  it('never falls back to the UAPI call() path for mutations', async () => {
+    await handlers.get('files_delete')!({ dir: '/home/u', files: 'a.txt', confirm: true });
+    await handlers.get('files_move')!({ source_dir: '/home/u', dest_dir: '/home/u/b', files: 'a.txt' });
+    expect(call).not.toHaveBeenCalled();
   });
 });

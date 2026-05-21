@@ -56,6 +56,36 @@ export class CPanelUapiError extends CPanelError {
   }
 }
 
+export class CPanelApi2Error extends CPanelError {
+  constructor(message: string, public readonly errors: string[]) {
+    super(message, 'API2_ERROR');
+    this.name = 'CPanelApi2Error';
+  }
+}
+
+/**
+ * cPanel API 2 response envelope. Unlike UAPI's flat {status, errors, data},
+ * API 2 nests everything under `cpanelresult` and signals success via
+ * `event.result` (1 = ok, 0 = failure). Application errors surface in `error`.
+ */
+export interface Api2Response<T = unknown> {
+  cpanelresult: {
+    data?: T;
+    // result is 1 on success — serialized as number or string depending on
+    // cPanel version. Coerce with Number() before comparing.
+    event?: { result: 0 | 1 | string; reason?: string };
+    error?: string;
+    func?: string;
+    module?: string;
+    [key: string]: unknown;
+  };
+}
+
+/** Auth-related error strings that should map to CPanelAuthError regardless of
+ * which API surfaced them. Shared by UAPI and API 2 dispatch. */
+const AUTH_ERROR_RE =
+  /\baccess denied\b|\bunauthorized\b|\bpermission denied\b|\binvalid (?:api )?(?:token|key|credentials?)\b|\bauthentication (?:failed|required)\b/i;
+
 /**
  * Param keys whose values must never appear in a request URL — cPanel logs the
  * full request line (including query string) to /usr/local/cpanel/logs/access_log.
@@ -153,13 +183,94 @@ export class CpanelClient {
     params: Record<string, string | number | boolean | undefined> = {},
     opts: { method?: 'GET' | 'POST' } = {},
   ): Promise<UapiResponse<T>> {
+    const url = `/execute/${encodeURIComponent(module)}/${encodeURIComponent(func)}`;
+    const { parsed } = await this.dispatch(url, params, opts);
+
+    // UAPI returns JSON with status 0/1 even on application errors.
+    const body = parsed as UapiResponse<T>;
+    if (body.status !== 1) {
+      const errors = body.errors ?? ['Unknown UAPI error'];
+      const joined = errors.join('; ');
+      // Some auth-related UAPI errors masquerade as status=0. Use word-boundary
+      // matches so "Invalid domain name" or "permission set" don't trip this.
+      if (AUTH_ERROR_RE.test(joined)) {
+        throw new CPanelAuthError(joined);
+      }
+      throw new CPanelUapiError(`UAPI ${module}::${func} failed: ${joined}`, errors);
+    }
+
+    return body;
+  }
+
+  /**
+   * Call a cPanel **API 2** endpoint. cPanel's file-mutation operations
+   * (Fileman::fileop op=unlink/move/copy/chmod/compress/extract) live in API 2,
+   * not UAPI — UAPI's Fileman module is read/utility only.
+   *
+   * Hits /json-api/cpanel with the cpanel_jsonapi_* envelope params plus the
+   * function params. Shares the cPHulk-safe single-attempt dispatch and the
+   * POST-for-sensitive-params routing with `call`.
+   *
+   * @param module   API 2 module (e.g. "Fileman")
+   * @param func     Function on that module (e.g. "fileop")
+   * @param params   Function params; values are stringified
+   * @param opts     { method?: 'GET' | 'POST' } — defaults to auto (POST iff sensitive)
+   */
+  async callApi2<T = unknown>(
+    module: string,
+    func: string,
+    params: Record<string, string | number | boolean | undefined> = {},
+    opts: { method?: 'GET' | 'POST' } = {},
+  ): Promise<Api2Response<T>> {
+    const envelope: Record<string, string | number | boolean | undefined> = {
+      cpanel_jsonapi_user: this.user,
+      cpanel_jsonapi_apiversion: 2,
+      cpanel_jsonapi_module: module,
+      cpanel_jsonapi_func: func,
+      ...params,
+    };
+    const { parsed } = await this.dispatch('/json-api/cpanel', envelope, opts);
+
+    const body = parsed as Api2Response<T>;
+    const result = body.cpanelresult;
+    if (!result || typeof result !== 'object') {
+      throw new CPanelApi2Error(`API 2 ${module}::${func}: unexpected response shape`, [
+        JSON.stringify(parsed).slice(0, 200),
+      ]);
+    }
+    // cPanel serializes event.result as either the number 1 or the string "1"
+    // depending on version (legacy XML layer is text). Coerce so a successful
+    // call isn't misread as a failure.
+    const succeeded = Number(result.event?.result) === 1;
+    const failed = !succeeded || Boolean(result.error);
+    if (failed) {
+      const detail = result.error ?? result.event?.reason ?? 'Unknown API 2 error';
+      if (AUTH_ERROR_RE.test(detail)) {
+        throw new CPanelAuthError(detail);
+      }
+      throw new CPanelApi2Error(`API 2 ${module}::${func} failed: ${detail}`, [detail]);
+    }
+
+    return body;
+  }
+
+  /**
+   * Shared HTTP dispatch for both API surfaces. Performs a single request (no
+   * retry — cPHulk-safe), POST-routes any payload carrying a sensitive param,
+   * and runs the cPHulk / auth / HTTP-status checks. Returns the parsed JSON
+   * body; per-API status interpretation is the caller's job.
+   */
+  private async dispatch(
+    url: string,
+    params: Record<string, string | number | boolean | undefined>,
+    opts: { method?: 'GET' | 'POST' },
+  ): Promise<{ parsed: unknown; status: number }> {
     const cleanParams: Record<string, string> = {};
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === null) continue;
       cleanParams[k] = String(v);
     }
 
-    const url = `/execute/${encodeURIComponent(module)}/${encodeURIComponent(func)}`;
     const method: 'GET' | 'POST' =
       opts.method ?? (hasSensitiveParam(cleanParams) ? 'POST' : 'GET');
 
@@ -208,33 +319,21 @@ export class CpanelClient {
       );
     }
 
-    // UAPI returns JSON with status 0/1 even on application errors.
-    let parsed: UapiResponse<T>;
+    let parsed: unknown;
     if (typeof response.data === 'object' && response.data !== null) {
-      parsed = response.data as UapiResponse<T>;
+      parsed = response.data;
     } else {
       try {
         parsed = JSON.parse(bodyText);
       } catch {
         throw new CPanelError(
-          `Non-JSON response from UAPI (status ${response.status}): ${bodyText.slice(0, 200)}`,
+          `Non-JSON response (status ${response.status}): ${bodyText.slice(0, 200)}`,
           'BAD_RESPONSE',
         );
       }
     }
 
-    if (parsed.status !== 1) {
-      const errors = parsed.errors ?? ['Unknown UAPI error'];
-      const joined = errors.join('; ');
-      // Some auth-related UAPI errors masquerade as status=0. Use word-boundary
-      // matches so "Invalid domain name" or "permission set" don't trip this.
-      if (/\baccess denied\b|\bunauthorized\b|\bpermission denied\b|\binvalid (?:api )?(?:token|key|credentials?)\b|\bauthentication (?:failed|required)\b/i.test(joined)) {
-        throw new CPanelAuthError(joined);
-      }
-      throw new CPanelUapiError(`UAPI ${module}::${func} failed: ${joined}`, errors);
-    }
-
-    return parsed;
+    return { parsed, status: response.status };
   }
 
   /** Last-4 of the token, safe for logging. */

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 — 2026-05-21
+
+Fix the file-mutation tools, which wrapped UAPI `Fileman` functions that do not exist. cPanel's UAPI `Fileman` module is read/utility only; file mutations live in **API 2 `Fileman::fileop`**. All six affected tools now route through API 2.
+
+### Fixed
+
+- **`files_delete`** was calling `Fileman::delete_files` (nonexistent in UAPI) and failed on every server. Now uses API 2 `Fileman::fileop op=unlink`. (Reported from a live session.)
+- Same root cause fixed for **`files_move`** (`op=move`), **`files_copy`** (`op=copy`), **`files_chmod`** (`op=chmod`, perms via `metadata`), **`files_compress`** (`op=compress`, type via `metadata`), and **`files_extract`** (`op=extract`) — all were latently broken against UAPI.
+
+### Added
+
+- `CpanelClient.callApi2()` — API 2 endpoint support (`/json-api/cpanel`), sharing the existing cPHulk-safe single-attempt dispatch, `validateStatus: () => true` invariant, and POST-routing for sensitive params with the UAPI path. New `CPanelApi2Error` distinguishes API 2 application failures; access-denied still maps to `CPanelAuthError`.
+
+Unaffected: `files_write_file` (`save_file_content`), `files_create_directory` (`mkdir`), and all read tools remain on the genuine UAPI path.
+
 ## 0.3.1 — 2026-05-19
 
 Dependency hygiene. No runtime behavior changes.

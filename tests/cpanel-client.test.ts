@@ -4,6 +4,7 @@ import {
   CPHulkLockoutError,
   CPanelAuthError,
   CPanelUapiError,
+  CPanelApi2Error,
 } from '../src/cpanel-client.js';
 
 // Mock axios so we control the entire HTTP layer.
@@ -214,5 +215,102 @@ describe('CpanelClient', () => {
     });
     const client = new CpanelClient(baseConfig);
     await expect(client.call('DNS', 'parse_zone', { zone: 'bogus' })).rejects.toBeInstanceOf(CPanelUapiError);
+  });
+});
+
+describe('CpanelClient.callApi2', () => {
+  const ok = (data: unknown) => ({
+    status: 200,
+    data: { cpanelresult: { event: { result: 1 }, data } },
+    headers: { 'content-type': 'application/json' },
+  });
+
+  it('hits /json-api/cpanel with the cpanel_jsonapi_* envelope + func params', async () => {
+    getMock.mockResolvedValue(ok([{ name: 'a.txt' }]));
+    const client = new CpanelClient(baseConfig);
+    const res = await client.callApi2('Fileman', 'fileop', { op: 'unlink', sourcefiles: '/home/u/a.txt' });
+    const [url, opts] = getMock.mock.calls[0] as [string, { params: Record<string, string> }];
+    expect(url).toBe('/json-api/cpanel');
+    expect(opts.params).toMatchObject({
+      cpanel_jsonapi_user: 'testuser',
+      cpanel_jsonapi_apiversion: '2',
+      cpanel_jsonapi_module: 'Fileman',
+      cpanel_jsonapi_func: 'fileop',
+      op: 'unlink',
+      sourcefiles: '/home/u/a.txt',
+    });
+    expect(res.cpanelresult.data).toEqual([{ name: 'a.txt' }]);
+  });
+
+  it('accepts string "1" for event.result (cPanel serializes it both ways)', async () => {
+    getMock.mockResolvedValue({
+      status: 200,
+      data: { cpanelresult: { event: { result: '1' }, data: [{ name: 'a.txt' }] } },
+      headers: { 'content-type': 'application/json' },
+    });
+    const client = new CpanelClient(baseConfig);
+    const res = await client.callApi2('Fileman', 'fileop', { op: 'unlink' });
+    expect(res.cpanelresult.data).toEqual([{ name: 'a.txt' }]);
+  });
+
+  it('throws CPanelApi2Error when event.result is 0', async () => {
+    getMock.mockResolvedValue({
+      status: 200,
+      data: { cpanelresult: { event: { result: 0, reason: 'No such file' } } },
+      headers: { 'content-type': 'application/json' },
+    });
+    const client = new CpanelClient(baseConfig);
+    await expect(client.callApi2('Fileman', 'fileop', { op: 'unlink' })).rejects.toBeInstanceOf(
+      CPanelApi2Error,
+    );
+  });
+
+  it('throws CPanelApi2Error when cpanelresult.error is set even if result=1', async () => {
+    getMock.mockResolvedValue({
+      status: 200,
+      data: { cpanelresult: { event: { result: 1 }, error: 'something broke' } },
+      headers: { 'content-type': 'application/json' },
+    });
+    const client = new CpanelClient(baseConfig);
+    await expect(client.callApi2('Fileman', 'fileop', { op: 'unlink' })).rejects.toBeInstanceOf(
+      CPanelApi2Error,
+    );
+  });
+
+  it('maps an access-denied API 2 error to CPanelAuthError', async () => {
+    getMock.mockResolvedValue({
+      status: 200,
+      data: { cpanelresult: { event: { result: 0 }, error: 'Access denied' } },
+      headers: { 'content-type': 'application/json' },
+    });
+    const client = new CpanelClient(baseConfig);
+    await expect(client.callApi2('Fileman', 'fileop', { op: 'unlink' })).rejects.toBeInstanceOf(
+      CPanelAuthError,
+    );
+  });
+
+  it('shares cPHulk dispatch with the UAPI path', async () => {
+    getMock.mockResolvedValue({
+      status: 403,
+      data: '<html>cphulkd: brute force protection</html>',
+      headers: { 'content-type': 'text/html' },
+    });
+    const client = new CpanelClient(baseConfig);
+    await expect(client.callApi2('Fileman', 'fileop', { op: 'unlink' })).rejects.toBeInstanceOf(
+      CPHulkLockoutError,
+    );
+    expect(getMock).toHaveBeenCalledOnce();
+  });
+
+  it('POST-routes API 2 calls carrying a sensitive param', async () => {
+    postMock.mockResolvedValue(ok({}));
+    const client = new CpanelClient(baseConfig);
+    await client.callApi2('SomeMod', 'somefunc', { token: 'sekret' });
+    expect(postMock).toHaveBeenCalledOnce();
+    expect(getMock).not.toHaveBeenCalled();
+    const [url, body] = postMock.mock.calls[0] as [string, string];
+    expect(url).toBe('/json-api/cpanel');
+    expect(body).toContain('token=sekret');
+    expect(body).toContain('cpanel_jsonapi_func=somefunc');
   });
 });

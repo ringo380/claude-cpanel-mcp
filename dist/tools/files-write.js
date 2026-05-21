@@ -134,7 +134,7 @@ export function registerFileWriteTools(server, getClient) {
         }
     });
     server.registerTool('files_delete', {
-        description: 'Delete one or more files or directories. Wraps Fileman::delete_files. ' +
+        description: 'Delete one or more files or directories. Wraps API2 Fileman::fileop (op=unlink). ' +
             'DESTRUCTIVE — no undo, no trash. Targets must live under a non-system path.',
         inputSchema: {
             dir: z.string().describe('Parent directory.'),
@@ -167,14 +167,18 @@ export function registerFileWriteTools(server, getClient) {
                 return filenameError(`${nameErr} ("${f}")`);
         }
         try {
-            return asJsonContent(await client.call('Fileman', 'delete_files', { dir, files: fileArr.join(',') }));
+            return asJsonContent(await client.callApi2('Fileman', 'fileop', {
+                op: 'unlink',
+                sourcefiles: fileArr.map((f) => `${dir}/${f}`).join(','),
+                doubledecode: 1,
+            }));
         }
         catch (err) {
             return asErrorContent(err);
         }
     });
     server.registerTool('files_move', {
-        description: 'Move/rename files. Wraps Fileman::move_files.',
+        description: 'Move/rename files. Wraps API2 Fileman::fileop (op=move).',
         inputSchema: {
             source_dir: z.string(),
             dest_dir: z.string(),
@@ -194,10 +198,11 @@ export function registerFileWriteTools(server, getClient) {
                 return filenameError(`${nameErr} ("${f}")`);
         }
         try {
-            return asJsonContent(await client.call('Fileman', 'move_files', {
-                source_dir,
-                dest_dir,
-                files: fileArr.join(','),
+            return asJsonContent(await client.callApi2('Fileman', 'fileop', {
+                op: 'move',
+                sourcefiles: fileArr.map((f) => `${source_dir}/${f}`).join(','),
+                destfiles: dest_dir,
+                doubledecode: 1,
             }));
         }
         catch (err) {
@@ -205,7 +210,7 @@ export function registerFileWriteTools(server, getClient) {
         }
     });
     server.registerTool('files_copy', {
-        description: 'Copy files. Wraps Fileman::copy_files.',
+        description: 'Copy files. Wraps API2 Fileman::fileop (op=copy).',
         inputSchema: {
             source_dir: z.string(),
             dest_dir: z.string(),
@@ -225,10 +230,11 @@ export function registerFileWriteTools(server, getClient) {
                 return filenameError(`${nameErr} ("${f}")`);
         }
         try {
-            return asJsonContent(await client.call('Fileman', 'copy_files', {
-                source_dir,
-                dest_dir,
-                files: fileArr.join(','),
+            return asJsonContent(await client.callApi2('Fileman', 'fileop', {
+                op: 'copy',
+                sourcefiles: fileArr.map((f) => `${source_dir}/${f}`).join(','),
+                destfiles: dest_dir,
+                doubledecode: 1,
             }));
         }
         catch (err) {
@@ -236,7 +242,7 @@ export function registerFileWriteTools(server, getClient) {
         }
     });
     server.registerTool('files_chmod', {
-        description: 'Change permissions on files. Wraps Fileman::chmod.',
+        description: 'Change permissions on files. Wraps API2 Fileman::fileop (op=chmod).',
         inputSchema: {
             dir: z.string(),
             files: z.union([z.string(), z.array(z.string())]),
@@ -255,14 +261,19 @@ export function registerFileWriteTools(server, getClient) {
                 return filenameError(`${nameErr} ("${f}")`);
         }
         try {
-            return asJsonContent(await client.call('Fileman', 'chmod', { dir, files: fileArr.join(','), permissions }));
+            return asJsonContent(await client.callApi2('Fileman', 'fileop', {
+                op: 'chmod',
+                sourcefiles: fileArr.map((f) => `${dir}/${f}`).join(','),
+                metadata: permissions,
+                doubledecode: 1,
+            }));
         }
         catch (err) {
             return asErrorContent(err);
         }
     });
     server.registerTool('files_compress', {
-        description: 'Compress files into an archive. Wraps Fileman::compress_files. Supported types: zip, tar, tar.gz (gz), tar.bz2 (bz2).',
+        description: 'Compress files into an archive. Wraps API2 Fileman::fileop (op=compress). Supported types: zip, tar, tar.gz (gz), tar.bz2 (bz2).',
         inputSchema: {
             sources: z.array(z.string()).describe('Absolute paths to files/directories to include.'),
             destination: z.string().describe('Absolute path to the archive to create.'),
@@ -273,10 +284,12 @@ export function registerFileWriteTools(server, getClient) {
         if (!client)
             return unconfiguredResult();
         try {
-            return asJsonContent(await client.call('Fileman', 'compress_files', {
-                sources: sources.join(','),
-                destination,
-                type,
+            return asJsonContent(await client.callApi2('Fileman', 'fileop', {
+                op: 'compress',
+                sourcefiles: sources.join(','),
+                destfiles: destination,
+                metadata: type,
+                doubledecode: 1,
             }));
         }
         catch (err) {
@@ -284,7 +297,7 @@ export function registerFileWriteTools(server, getClient) {
         }
     });
     server.registerTool('files_extract', {
-        description: 'Extract an archive. Wraps Fileman::extract.',
+        description: 'Extract an archive. Wraps API2 Fileman::fileop (op=extract).',
         inputSchema: {
             sources: z.array(z.string()).describe('Archive file(s) to extract.'),
             destination: z.string().describe('Target directory.'),
@@ -296,9 +309,11 @@ export function registerFileWriteTools(server, getClient) {
         if (pathLooksDangerous(destination))
             return dangerousPathError(destination);
         try {
-            return asJsonContent(await client.call('Fileman', 'extract', {
-                sources: sources.join(','),
-                destination,
+            return asJsonContent(await client.callApi2('Fileman', 'fileop', {
+                op: 'extract',
+                sourcefiles: sources.join(','),
+                destfiles: destination,
+                doubledecode: 1,
             }));
         }
         catch (err) {
