@@ -14,7 +14,7 @@ MCP server for the cPanel UAPI, distributed as a Claude Code plugin. Manage emai
 
 ### Via the Robworks marketplace
 ```
-/plugin marketplace add ringo380/robworks-claude-code-plugins
+/plugin marketplace add robworks-code/robworks-claude-code-plugins
 /plugin install cpanel-mcp
 ```
 
