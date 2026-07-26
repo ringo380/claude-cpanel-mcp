@@ -1,0 +1,16 @@
+title: cpanel-mcp
+description: >-
+  MCP server for the cPanel UAPI, distributed as a Claude Code plugin.
+  Manage email, DNS, files, MySQL, FTP, SSL, cron, domains, and backups
+  on shared cPanel hosting.
+theme: jekyll-theme-primer
+
+url: https://ringo380.github.io
+baseurl: /claude-cpanel-mcp
+
+github:
+  repository_url: https://github.com/ringo380/claude-cpanel-mcp
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
