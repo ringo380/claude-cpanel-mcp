@@ -2,7 +2,25 @@
 
 MCP server for the cPanel UAPI, distributed as a Claude Code plugin. Manage email accounts, DNS records, files, MySQL databases, FTP accounts, SSL certificates, cron jobs, subdomains, addon domains, and backups on any shared cPanel host - directly from Claude Code.
 
-**Docs site**: https://ringo380.github.io/claude-cpanel-mcp/
+## Documentation
+
+Full docs: **https://ringo380.github.io/claude-cpanel-mcp/**
+
+| Page | Covers |
+| --- | --- |
+| [Setup and authentication](https://ringo380.github.io/claude-cpanel-mcp/setup/) | Creating an API token, credential profiles, environment variables |
+| [Tool reference](https://ringo380.github.io/claude-cpanel-mcp/tools/) | All 74 tools by family, and the cPanel API call each one wraps |
+| [Parameter reference](https://ringo380.github.io/claude-cpanel-mcp/parameters/) | Input parameters for every tool, generated from the live schemas |
+| [Troubleshooting](https://ringo380.github.io/claude-cpanel-mcp/troubleshooting/) | cPHulk lockouts, auth failures, TLS problems, error codes |
+| [Development](https://ringo380.github.io/claude-cpanel-mcp/development/) | Building, testing, design invariants, release flow |
+
+Version history is in [CHANGELOG.md](CHANGELOG.md). Bug reports and feature requests: [issues](https://github.com/ringo380/claude-cpanel-mcp/issues).
+
+## Requirements
+
+- **Node 18+**
+- A cPanel account with **API token** access (Security -> Manage API Tokens). No WHM or root access needed; everything runs as the cPanel user.
+- cPanel reachable over HTTPS, by default on port `2083`.
 
 ## What it does
 
@@ -11,7 +29,7 @@ MCP server for the cPanel UAPI, distributed as a Claude Code plugin. Manage emai
 - **`list_modules` / `list_functions`** for discovery, backed by a static catalog (no network call).
 - **Named credential profiles** - manage several cPanel accounts and switch between them (`auth_switch_profile`, `/cpanel-mcp:account-switch`).
 - **cPHulk-aware**: detects brute-force-protection lockouts and refuses to retry, surfacing a clear "file a support ticket" message instead of hammering the server.
-- **Secrets never hit the access log**: calls carrying a password, token, key, or certificate are automatically routed over POST.
+- **Secrets stay out of the access log**: your API token travels in an `Authorization` header, and calls carrying a password, key, or certificate param are automatically routed over POST rather than a logged query string.
 - **Interactive setup** via an MCP `setup` tool, a `/cpanel-mcp:setup` slash command, or a standalone `cpanel-mcp-setup` CLI. Credentials are validated against the live UAPI before being saved.
 
 ## Install
@@ -98,7 +116,7 @@ Read: `files_list_dir`, `files_get_info`, `files_read_file`, `files_disk_usage`
 
 Write: `files_write_file`, `files_create_directory`, `files_delete`, `files_move`, `files_copy`, `files_chmod`, `files_compress`, `files_extract`
 
-`files_delete` requires an explicit confirm flag, and every write tool rejects system paths (`/`, `/etc`, `/var`, `/usr`, ...).
+Two guards apply to every write tool. Paths under a system root (`/`, `/etc`, `/var`, `/usr`, `/bin`, `/sbin`, `/boot`, `/sys`, `/proc`, `/dev`, `/lib`, `/lib64`, `/opt`, `/root`) are refused, including descendants. And file names must be **bare** - a name containing `/` or `\`, a null byte, or `.`/`..` is rejected, so pass the directory in `dir` (or `source_dir`) and the name on its own.
 
 ### MySQL
 
@@ -128,7 +146,26 @@ Shell metacharacters in a cron `command` (`$VAR`, backticks, `~`) are passed ver
 
 `backup_list`, `backup_create_full`, `account_info`
 
-Anything not covered above: use `uapi_call(module, function, params)`. Reference: [cPanel UAPI docs](https://api.docs.cpanel.net/openapi/cpanel-public/operations/).
+### Destructive tools
+
+Five tools refuse to act unless you pass `confirm: true`:
+
+`files_delete`, `mysql_delete_database`, `mysql_delete_user`, `mysql_rename_database`, `auth_delete_profile`
+
+`mysql_rename_database` is gated because every application connecting by the old name breaks until reconfigured, not because data is lost.
+
+### Reaching anything not listed
+
+`uapi_call(module, function, params)` calls any UAPI endpoint. Reference: [cPanel UAPI docs](https://api.docs.cpanel.net/cpanel/introduction/).
+
+It is **UAPI-only**. cPanel's older API 2 (`/json-api/cpanel`) has no escape hatch, so API 2 functions are reachable only through the curated tools that already use it - the file-mutation family. There is no generic `api2_call`.
+
+## Slash commands
+
+| Command | Purpose |
+| --- | --- |
+| `/cpanel-mcp:setup` | Guided setup: collect host, user, and token, dry-run validate, save to a named profile |
+| `/cpanel-mcp:account-switch` | List saved profiles and switch the active one |
 
 ## cPHulk lockout warning
 
@@ -140,10 +177,29 @@ Shared cPanel hosts often run aggressive cPHulk brute-force protection. **A wron
 
 If you do get locked out, connecting via the server's raw IP (set `CPANEL_HOST` to the IP and re-run `setup`) sometimes bypasses hostname-keyed cPHulk rules. Otherwise: support ticket.
 
+### Error codes
+
+Failures surface as a structured error with one of these codes, so a lockout is never confused with a bad password:
+
+| Code | Meaning |
+| --- | --- |
+| `CPHULK_LOCKOUT` | Brute-force protection tripped. Stop; do not retry. Usually needs a support ticket. |
+| `AUTH_FAILED` | Credentials rejected. Check user and token; a wrong token repeated becomes a lockout. |
+| `UAPI_ERROR` | The UAPI call reached cPanel and failed on its own terms (bad params, missing feature). |
+| `API2_ERROR` | Same, for an API 2 call - the file-mutation tools. |
+| `NETWORK_ERROR` | Host unreachable, DNS failure, TLS rejection, or timeout. |
+| `BAD_RESPONSE` | cPanel returned something unparseable, typically an HTML error page. |
+
+More detail, with fixes for each: [troubleshooting](https://ringo380.github.io/claude-cpanel-mcp/troubleshooting/).
+
 ## Notes on the API surface
 
 - **File mutations use cPanel API 2, not UAPI.** UAPI's `Fileman` module is read/utility only - `delete_files`, `move_files` and friends do not exist there. `files_delete|move|copy|chmod|compress|extract` route through API 2 `Fileman::fileop`. `files_write_file`, `files_create_directory`, and all reads stay on UAPI. See [CHANGELOG 0.4.0](CHANGELOG.md).
-- **Sensitive params force POST.** Any param whose name matches `password|pass|key|cert|cabundle|token|secret` (and similar) is sent as a POST body, because GET query strings land in `/usr/local/cpanel/logs/access_log` in plaintext.
+- **Sensitive params force POST.** GET query strings land in `/usr/local/cpanel/logs/access_log` in plaintext, so any call carrying one of these param names is sent as a form-encoded POST body instead:
+
+  `password`, `pass`, `passwd`, `newpass`, `key`, `cert`, `cabundle`, `api_key`, `apikey`, `token`, `secret`
+
+  Matching is **exact on the lowercased key**, not a substring or pattern. A param named `new_password` or `ssl_key` is *not* on the list and would go out over GET. Every curated tool uses names from the list, so this only matters for `uapi_call`: if you pass a secret-bearing param whose name is not above, it will be logged by cPanel. The account's API token itself is never affected - it travels in an `Authorization` header on every request, never in a URL.
 - **The tool list is static.** Every tool registers at startup; if no credentials are loaded, handlers return a structured "unconfigured" error rather than disappearing from the list.
 
 ## Develop
@@ -152,11 +208,24 @@ If you do get locked out, connecting via the server's raw IP (set `CPANEL_HOST` 
 git clone https://github.com/ringo380/claude-cpanel-mcp.git
 cd claude-cpanel-mcp
 npm install
-npm run build
-npm test          # vitest, 50 tests
-npm run dev       # watch mode via tsx
-npm run type-check
+npm run build         # tsc, then chmod +x the two bin entry points
+npm test              # vitest, 50 tests
+npm run type-check    # tsc --noEmit
+npm run dev           # watch mode via tsx
+npm run test:watch    # vitest in watch mode
+npm start             # run the built server on stdio
+npm run docs:params   # regenerate docs/parameters.md
 ```
+
+`docs/parameters.md` is **generated, not hand-written**. `npm run docs:params` launches the built server, asks it for `tools/list`, and renders the JSON Schema it gets back - so the published page cannot drift from the Zod schemas. After changing any tool's `inputSchema`, rebuild and regenerate:
+
+```bash
+npm run build && npm run docs:params
+```
+
+It reads `dist/`, not `src/`, so a stale build produces a stale page. It runs with no `CPANEL_*` variables set, makes no network call, and cannot trip cPHulk.
+
+The package installs two binaries: `cpanel-mcp` (the MCP server, stdio) and `cpanel-mcp-setup` (the interactive credential CLI).
 
 Requires Node 18+.
 
