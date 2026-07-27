@@ -30,7 +30,7 @@ export class CPHulkLockoutError extends CPanelError {
   constructor(host: string, detail: string) {
     super(
       `cPHulk brute-force protection has locked this account or IP at ${host}. ` +
-        `File a support ticket with your hosting provider to unblock — do NOT retry, ` +
+        `File a support ticket with your hosting provider to unblock - do NOT retry, ` +
         `repeated attempts extend the lockout window. Detail: ${detail}`,
       'CPHULK_LOCKOUT',
     );
@@ -42,7 +42,7 @@ export class CPanelAuthError extends CPanelError {
   constructor(detail: string) {
     super(
       `cPanel authentication failed: ${detail}. Verify CPANEL_USER and CPANEL_API_KEY. ` +
-        `If credentials are correct, you may have triggered cPHulk — check for a lockout email.`,
+        `If credentials are correct, you may have triggered cPHulk - check for a lockout email.`,
       'AUTH_FAILED',
     );
     this.name = 'CPanelAuthError';
@@ -71,7 +71,7 @@ export class CPanelApi2Error extends CPanelError {
 export interface Api2Response<T = unknown> {
   cpanelresult: {
     data?: T;
-    // result is 1 on success — serialized as number or string depending on
+    // result is 1 on success - serialized as number or string depending on
     // cPanel version. Coerce with Number() before comparing.
     event?: { result: 0 | 1 | string; reason?: string };
     error?: string;
@@ -87,7 +87,7 @@ const AUTH_ERROR_RE =
   /\baccess denied\b|\bunauthorized\b|\bpermission denied\b|\binvalid (?:api )?(?:token|key|credentials?)\b|\bauthentication (?:failed|required)\b/i;
 
 /**
- * Param keys whose values must never appear in a request URL — cPanel logs the
+ * Param keys whose values must never appear in a request URL - cPanel logs the
  * full request line (including query string) to /usr/local/cpanel/logs/access_log.
  * Any call carrying one of these keys is auto-routed via POST with a
  * form-encoded body.
@@ -123,7 +123,7 @@ function looksLikeCphulk(status: number | undefined, body: string, contentType: 
   if (status === 503 && lower.includes('temporarily')) {
     return true;
   }
-  // 403 "access denied" / "forbidden" — only count as cPHulk when the response
+  // 403 "access denied" / "forbidden" - only count as cPHulk when the response
   // is HTML (cPHulk serves an HTML lockout page). UAPI auth failures return
   // JSON; classifying those as cPHulk would tell the user to file a support
   // ticket when they really just need to fix the token.
@@ -175,7 +175,7 @@ export class CpanelClient {
    * @param module   UAPI module (e.g. "Email", "DNS", "Mysql")
    * @param func     Function on that module (e.g. "list_pops")
    * @param params   UAPI params; values are stringified
-   * @param opts     { method?: 'GET' | 'POST' } — defaults to auto (POST iff sensitive)
+   * @param opts     { method?: 'GET' | 'POST' } - defaults to auto (POST iff sensitive)
    */
   async call<T = unknown>(
     module: string,
@@ -205,7 +205,7 @@ export class CpanelClient {
   /**
    * Call a cPanel **API 2** endpoint. cPanel's file-mutation operations
    * (Fileman::fileop op=unlink/move/copy/chmod/compress/extract) live in API 2,
-   * not UAPI — UAPI's Fileman module is read/utility only.
+   * not UAPI - UAPI's Fileman module is read/utility only.
    *
    * Hits /json-api/cpanel with the cpanel_jsonapi_* envelope params plus the
    * function params. Shares the cPHulk-safe single-attempt dispatch and the
@@ -214,7 +214,7 @@ export class CpanelClient {
    * @param module   API 2 module (e.g. "Fileman")
    * @param func     Function on that module (e.g. "fileop")
    * @param params   Function params; values are stringified
-   * @param opts     { method?: 'GET' | 'POST' } — defaults to auto (POST iff sensitive)
+   * @param opts     { method?: 'GET' | 'POST' } - defaults to auto (POST iff sensitive)
    */
   async callApi2<T = unknown>(
     module: string,
@@ -256,7 +256,7 @@ export class CpanelClient {
 
   /**
    * Shared HTTP dispatch for both API surfaces. Performs a single request (no
-   * retry — cPHulk-safe), POST-routes any payload carrying a sensitive param,
+   * retry - cPHulk-safe), POST-routes any payload carrying a sensitive param,
    * and runs the cPHulk / auth / HTTP-status checks. Returns the parsed JSON
    * body; per-API status interpretation is the caller's job.
    */
@@ -288,7 +288,7 @@ export class CpanelClient {
       const ax = err as AxiosError;
       const code = ax.code ?? 'NETWORK_ERROR';
       throw new CPanelError(
-        `Network error reaching ${this.host}:${this.port} — ${ax.message}`,
+        `Network error reaching ${this.host}:${this.port} - ${ax.message}`,
         code,
       );
     }
@@ -299,7 +299,7 @@ export class CpanelClient {
       (response.headers && (response.headers['content-type'] ?? response.headers['Content-Type'])) ?? '',
     ).toLowerCase();
 
-    // cPHulk check FIRST — it may return 403/503 with HTML, not JSON.
+    // cPHulk check FIRST - it may return 403/503 with HTML, not JSON.
     if (looksLikeCphulk(response.status, bodyText, contentType)) {
       throw new CPHulkLockoutError(this.host, `HTTP ${response.status}: ${bodyText.slice(0, 200)}`);
     }

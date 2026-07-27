@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Silence stdout before any imports — MCP uses stdout exclusively for JSON-RPC.
+// Silence stdout before any imports - MCP uses stdout exclusively for JSON-RPC.
 /* eslint-disable no-console */
 console.log = () => { };
 console.warn = () => { };

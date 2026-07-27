@@ -10,7 +10,7 @@ export function registerAuthHelperTools(server: McpServer): void {
       description:
         'Return the URL of the cPanel API token management page for a given host (or the ' +
         'active profile\'s host), plus step-by-step instructions for generating a token. ' +
-        'Does NOT open the browser automatically — that would be unreliable in headless / ' +
+        'Does NOT open the browser automatically - that would be unreliable in headless / ' +
         'SSH sessions. Surface the URL to the user so they (or Claude) can open it.',
       inputSchema: {
         host: z
@@ -60,11 +60,11 @@ export function registerAuthHelperTools(server: McpServer): void {
               `Steps to generate a token:\n` +
               `  1. Open the URL above in a browser and log into cPanel.\n` +
               `     (If "Manage API Tokens" 404s, the hosting provider has disabled the\n` +
-              `     feature — file a support ticket asking for it to be enabled.)\n` +
+              `     feature - file a support ticket asking for it to be enabled.)\n` +
               `  2. Click "Create".\n` +
               `  3. Name the token (suggested: "${suggestedName}").\n` +
               `  4. Leave privileges at the default (full access) unless you have a reason to scope.\n` +
-              `  5. Click "Create" again, then COPY THE TOKEN — it is shown exactly once.\n` +
+              `  5. Click "Create" again, then COPY THE TOKEN - it is shown exactly once.\n` +
               `  6. Paste the token back in chat; we\'ll validate it with \`auth_test\`\n` +
               `     before committing with \`setup\`.\n`,
           },

@@ -67,7 +67,7 @@ export declare class CpanelClient {
      * @param module   UAPI module (e.g. "Email", "DNS", "Mysql")
      * @param func     Function on that module (e.g. "list_pops")
      * @param params   UAPI params; values are stringified
-     * @param opts     { method?: 'GET' | 'POST' } — defaults to auto (POST iff sensitive)
+     * @param opts     { method?: 'GET' | 'POST' } - defaults to auto (POST iff sensitive)
      */
     call<T = unknown>(module: string, func: string, params?: Record<string, string | number | boolean | undefined>, opts?: {
         method?: 'GET' | 'POST';
@@ -75,7 +75,7 @@ export declare class CpanelClient {
     /**
      * Call a cPanel **API 2** endpoint. cPanel's file-mutation operations
      * (Fileman::fileop op=unlink/move/copy/chmod/compress/extract) live in API 2,
-     * not UAPI — UAPI's Fileman module is read/utility only.
+     * not UAPI - UAPI's Fileman module is read/utility only.
      *
      * Hits /json-api/cpanel with the cpanel_jsonapi_* envelope params plus the
      * function params. Shares the cPHulk-safe single-attempt dispatch and the
@@ -84,14 +84,14 @@ export declare class CpanelClient {
      * @param module   API 2 module (e.g. "Fileman")
      * @param func     Function on that module (e.g. "fileop")
      * @param params   Function params; values are stringified
-     * @param opts     { method?: 'GET' | 'POST' } — defaults to auto (POST iff sensitive)
+     * @param opts     { method?: 'GET' | 'POST' } - defaults to auto (POST iff sensitive)
      */
     callApi2<T = unknown>(module: string, func: string, params?: Record<string, string | number | boolean | undefined>, opts?: {
         method?: 'GET' | 'POST';
     }): Promise<Api2Response<T>>;
     /**
      * Shared HTTP dispatch for both API surfaces. Performs a single request (no
-     * retry — cPHulk-safe), POST-routes any payload carrying a sensitive param,
+     * retry - cPHulk-safe), POST-routes any payload carrying a sensitive param,
      * and runs the cPHulk / auth / HTTP-status checks. Returns the parsed JSON
      * body; per-API status interpretation is the caller's job.
      */

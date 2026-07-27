@@ -68,7 +68,7 @@ export function registerMysqlTools(server, getClient) {
         }
     });
     server.registerTool('mysql_delete_database', {
-        description: 'Delete a MySQL database. DESTRUCTIVE — no undo. Pass the full name including the cPanel prefix. Wraps Mysql::delete_database.',
+        description: 'Delete a MySQL database. DESTRUCTIVE - no undo. Pass the full name including the cPanel prefix. Wraps Mysql::delete_database.',
         inputSchema: {
             name: z.string().describe('Full database name including the cPanel user prefix.'),
             confirm: z.boolean().describe('Must be true to acknowledge data loss.'),
@@ -116,7 +116,7 @@ export function registerMysqlTools(server, getClient) {
         }
     });
     server.registerTool('mysql_rename_database', {
-        description: 'Rename a MySQL database. DISRUPTIVE — every application connecting by the old name breaks until reconfigured. Wraps Mysql::rename_database.',
+        description: 'Rename a MySQL database. DISRUPTIVE - every application connecting by the old name breaks until reconfigured. Wraps Mysql::rename_database.',
         inputSchema: {
             oldname: z.string().describe('Current full database name (with cPanel prefix).'),
             newname: z.string().describe('New full database name (with cPanel prefix).'),

@@ -88,8 +88,8 @@ export function registerSetupTools(server, setClient, onConfigured) {
             content: [
                 {
                     type: 'text',
-                    text: `Success — credentials validated and saved to ${path} (mode 0600, atomic).\n\n` +
-                        `Profile: "${profileName}"${shouldActivate ? ' (now active)' : ' (saved but NOT active — call auth_switch_profile to activate)'}.\n` +
+                    text: `Success - credentials validated and saved to ${path} (mode 0600, atomic).\n\n` +
+                        `Profile: "${profileName}"${shouldActivate ? ' (now active)' : ' (saved but NOT active - call auth_switch_profile to activate)'}.\n` +
                         `Authenticated as user "${user}" on ${config.host}:${config.port}.\n` +
                         (shouldActivate ? `All cPanel tools (email_*, dns_*, files_*, mysql_*, etc.) are now available.\n\n` : '\n') +
                         `Account info:\n${JSON.stringify(result.data, null, 2)}`,
@@ -166,9 +166,9 @@ export function registerSetupTools(server, setClient, onConfigured) {
                         type: 'text',
                         text: `auth_test FAILED: [${result.code}] ${result.message}\n\n` +
                             `Nothing was written to disk. Common causes:\n` +
-                            `  • CPHULK_LOCKOUT — your IP is blocked; file a support ticket (retrying extends the lockout).\n` +
-                            `  • AUTH_FAILED — wrong user/token; check both at ${tokenManagementUrl(config.host, config.port)}\n` +
-                            `  • NETWORK_ERROR — host unreachable on port ${config.port}.`,
+                            `  • CPHULK_LOCKOUT - your IP is blocked; file a support ticket (retrying extends the lockout).\n` +
+                            `  • AUTH_FAILED - wrong user/token; check both at ${tokenManagementUrl(config.host, config.port)}\n` +
+                            `  • NETWORK_ERROR - host unreachable on port ${config.port}.`,
                     },
                 ],
             };
@@ -177,7 +177,7 @@ export function registerSetupTools(server, setClient, onConfigured) {
             content: [
                 {
                     type: 'text',
-                    text: `auth_test OK — credentials are valid for ${user}@${config.host}:${config.port}.\n` +
+                    text: `auth_test OK - credentials are valid for ${user}@${config.host}:${config.port}.\n` +
                         `Nothing was written to disk. Run \`setup\` with these same values to persist.\n\n` +
                         `Account info:\n${JSON.stringify(result.data, null, 2)}`,
                 },
@@ -234,7 +234,7 @@ export function registerSetupTools(server, setClient, onConfigured) {
         const result = await validateConfigEphemeral(config);
         if (!result.ok) {
             const cphulkWarning = result.code === 'CPHULK_LOCKOUT'
-                ? `\n\n⚠ This was a CPHULK_LOCKOUT. DO NOT RETRY — repeated attempts extend ` +
+                ? `\n\n⚠ This was a CPHULK_LOCKOUT. DO NOT RETRY - repeated attempts extend ` +
                     `the lockout window. File a support ticket with the hosting provider to unblock, ` +
                     `or try again from a different IP (cPHulk is often hostname/IP-keyed).`
                 : '';
@@ -267,7 +267,7 @@ export function registerSetupTools(server, setClient, onConfigured) {
                 {
                     type: 'text',
                     text: `Token rotated for profile "${profileName}": ...${oldSuffix} → ...${newSuffix}.\n` +
-                        `${isActive ? 'Active profile — in-memory client refreshed.' : 'Profile is NOT active; no in-memory effect.'}\n\n` +
+                        `${isActive ? 'Active profile - in-memory client refreshed.' : 'Profile is NOT active; no in-memory effect.'}\n\n` +
                         `Reminder: revoke the old token (...${oldSuffix}) in cPanel UI when you\'re sure the new one is healthy.`,
                 },
             ],
@@ -331,7 +331,7 @@ export function registerSetupTools(server, setClient, onConfigured) {
                 content: [
                     {
                         type: 'text',
-                        text: `Active profile is now "${profile}" — ${cfg.config.user}@${cfg.config.host}:${cfg.config.port}.`,
+                        text: `Active profile is now "${profile}" - ${cfg.config.user}@${cfg.config.host}:${cfg.config.port}.`,
                     },
                 ],
             };
@@ -348,7 +348,7 @@ export function registerSetupTools(server, setClient, onConfigured) {
         };
     });
     server.registerTool('auth_delete_profile', {
-        description: 'Delete a saved profile. Refuses to delete the active profile — switch first. ' +
+        description: 'Delete a saved profile. Refuses to delete the active profile - switch first. ' +
             'Use cautiously; the on-disk credentials are removed immediately (no undo).',
         inputSchema: {
             profile: z

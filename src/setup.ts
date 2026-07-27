@@ -107,7 +107,7 @@ async function main(): Promise<void> {
   console.log(`Authenticated as ${user} on ${host}:${port}.`);
   console.log('');
   console.log('Reconnect the MCP server in Claude Code (/mcp → reconnect cpanel-mcp), then');
-  console.log('use any tool — e.g. `whoami`, `email_list_accounts`, `dns_list_zones`.');
+  console.log('use any tool - e.g. `whoami`, `email_list_accounts`, `dns_list_zones`.');
   /* eslint-enable no-console */
 }
 

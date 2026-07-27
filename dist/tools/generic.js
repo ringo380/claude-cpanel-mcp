@@ -34,7 +34,7 @@ function asErrorContent(err) {
 export { unconfiguredResult, asJsonContent, asErrorContent };
 export function registerGenericTools(server, getClient) {
     server.registerTool('whoami', {
-        description: 'Return the configured cPanel host, port, user, and last-4 of the API token. No network call — for a live credential check call `auth_status`; for live account stats call `account_info`. Use this to verify which credentials are loaded.',
+        description: 'Return the configured cPanel host, port, user, and last-4 of the API token. No network call - for a live credential check call `auth_status`; for live account stats call `account_info`. Use this to verify which credentials are loaded.',
         inputSchema: {},
     }, async () => {
         const client = getClient();
@@ -48,11 +48,11 @@ export function registerGenericTools(server, getClient) {
         });
     });
     server.registerTool('list_modules', {
-        description: 'List known cPanel UAPI modules with one-line descriptions. Static catalog — no network call. Use as a navigation aid before calling list_functions or uapi_call.',
+        description: 'List known cPanel UAPI modules with one-line descriptions. Static catalog - no network call. Use as a navigation aid before calling list_functions or uapi_call.',
         inputSchema: {},
     }, async () => asJsonContent(MODULES.map((m) => ({ name: m.name, description: m.description }))));
     server.registerTool('list_functions', {
-        description: 'List known functions for a UAPI module. Static catalog — not exhaustive. For any module/function not listed, use uapi_call directly.',
+        description: 'List known functions for a UAPI module. Static catalog - not exhaustive. For any module/function not listed, use uapi_call directly.',
         inputSchema: {
             module: z.string().describe('UAPI module name, e.g. "Email", "DNS", "Mysql"'),
         },

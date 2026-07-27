@@ -1,7 +1,7 @@
 {
   "name": "@ringo380/cpanel-mcp",
   "version": "0.4.1",
-  "description": "MCP server for the cPanel UAPI — manage email, DNS, files, MySQL, SSL, cron, subdomains, and more on shared cPanel hosting",
+  "description": "MCP server for the cPanel UAPI - manage email, DNS, files, MySQL, SSL, cron, subdomains, and more on shared cPanel hosting",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

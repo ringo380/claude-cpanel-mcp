@@ -52,7 +52,7 @@ describe('files write tool routing', () => {
     expect(postMock).not.toHaveBeenCalled();
   });
 
-  // Ftp::passwd carries `pass` — must POST (we added `pass` indirectly via
+  // Ftp::passwd carries `pass` - must POST (we added `pass` indirectly via
   // SENSITIVE_PARAM_KEYS containing common aliases; verify).
   it('Ftp::passwd routes via POST (pass param)', async () => {
     postMock.mockResolvedValue({

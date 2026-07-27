@@ -53,7 +53,7 @@ describe('config', () => {
       CPANEL_USER: 'fileuser',
       CPANEL_API_KEY: 'filetoken',
     });
-    // Confirm file mode is 0600. profilesDir() reads $HOME at call time —
+    // Confirm file mode is 0600. profilesDir() reads $HOME at call time -
     // do not import the PROFILES_DIR constant; it snapshots at module load.
     const written = path.join(profilesDir(), 'default.env');
     const stat = fs.statSync(written);

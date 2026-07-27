@@ -82,12 +82,15 @@ const FAMILIES = [
   ['Backups and account', (n) => n.startsWith('backup_') || n === 'account_info'],
 ];
 
-// Escape table cells, and normalise the em/en dashes that some source
-// descriptions still carry (see issue #5) so the published page matches the
-// hand-written docs. Presentation only - the schemas remain the source of truth.
+// Escape table cells, and normalise any em/en dash a description might carry
+// so the published page matches the hand-written docs. The source tree itself
+// is plain-hyphen only, so this is a backstop against regressions rather than a
+// fixup for known content. Presentation only - the schemas stay the source of
+// truth. The class is written with escapes to keep this file pure ASCII:
+// U+2010-U+2015 are the dash punctuation block, U+2212 is the minus sign.
 const esc = (s) =>
   String(s)
-    .replace(/[‐-―−]/g, '-')
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
     .replace(/\|/g, '\\|')
     .replace(/\n+/g, ' ')
     .trim();

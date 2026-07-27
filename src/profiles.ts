@@ -152,7 +152,7 @@ export function readProfile(name: string): Record<string, string> {
 /**
  * Atomic profile write: writes to a temp file in the same directory, then
  * renames into place (rename within the same fs is atomic on POSIX). Always
- * chmod 0600 after — Linux umask can mask the `mode:` argument to writeFile.
+ * chmod 0600 after - Linux umask can mask the `mode:` argument to writeFile.
  */
 export function writeProfileAtomic(name: string, values: ProfileValues): string {
   assertValidProfileName(name);

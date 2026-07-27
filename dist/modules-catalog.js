@@ -1,6 +1,6 @@
 /**
  * Static catalog of common UAPI modules and a sampling of their most-used
- * functions. NOT exhaustive — UAPI exposes 80+ modules. This list is a
+ * functions. NOT exhaustive - UAPI exposes 80+ modules. This list is a
  * navigation aid for `list_modules` and `list_functions`; users can always
  * call `uapi_call(module, function, params)` directly even for items not
  * listed here.

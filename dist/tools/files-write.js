@@ -44,7 +44,7 @@ function dangerousPathError(dir) {
         content: [
             {
                 type: 'text',
-                text: `Refusing to operate on "${dir}" — this looks like a system path. ` +
+                text: `Refusing to operate on "${dir}" - this looks like a system path. ` +
                     `cPanel users normally work under /home/<user>. If you really need this, ` +
                     `call uapi_call directly with Fileman::<op> at your own risk.`,
             },
@@ -60,7 +60,7 @@ export function validateFilename(file) {
     if (file.includes('\0'))
         return 'filename contains a null byte';
     if (file.includes('/') || file.includes('\\')) {
-        return 'filename must not contain "/" or "\\\\" — pass the directory in `dir` instead';
+        return 'filename must not contain "/" or "\\\\" - pass the directory in `dir` instead';
     }
     if (file === '.' || file === '..')
         return 'filename "." / ".." is not allowed';
@@ -135,7 +135,7 @@ export function registerFileWriteTools(server, getClient) {
     });
     server.registerTool('files_delete', {
         description: 'Delete one or more files or directories. Wraps API2 Fileman::fileop (op=unlink). ' +
-            'DESTRUCTIVE — no undo, no trash. Targets must live under a non-system path.',
+            'DESTRUCTIVE - no undo, no trash. Targets must live under a non-system path.',
         inputSchema: {
             dir: z.string().describe('Parent directory.'),
             files: z

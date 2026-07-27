@@ -46,7 +46,7 @@ export function registerFtpTools(server, getClient) {
             destroy: z
                 .boolean()
                 .optional()
-                .describe('Set true to also remove the user\'s home directory. DESTRUCTIVE — defaults to false.'),
+                .describe('Set true to also remove the user\'s home directory. DESTRUCTIVE - defaults to false.'),
         },
     }, async ({ user, destroy }) => {
         const client = getClient();
@@ -101,7 +101,7 @@ export function registerFtpTools(server, getClient) {
         if (!client)
             return unconfiguredResult();
         try {
-            // Sequential, not Promise.all: cPHulk-safe — a single failure on the
+            // Sequential, not Promise.all: cPHulk-safe - a single failure on the
             // first call short-circuits and we don't issue the second, which
             // would otherwise double the cPHulk increment on stale creds.
             const name = await client.call('Ftp', 'server_name');
