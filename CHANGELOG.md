@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.2 - 2026-07-26
+
+Documentation release. No runtime behavior changes; all 50 tests pass unchanged and `npm audit` stays clean.
+
+### Added
+
+- **Parameter documentation for all 74 tools.** 34 parameters previously reached the tool list with no description at all. Every parameter now carries one, including the distinctions that were easiest to get wrong: which email tools want a local part versus a full address, that `mysql_create_user` takes an unprefixed name while every other MySQL tool wants the prefixed one, and that file tools require a bare file name with the directory passed separately.
+- **`docs/parameters.md`**, a generated parameter reference published at [/parameters/](https://ringo380.github.io/claude-cpanel-mcp/parameters/). Built by `npm run docs:params`, which launches the built server, requests `tools/list`, and renders the JSON Schema it gets back, so the page cannot drift from the Zod schemas. It runs with no `CPANEL_*` variables set, makes no network call, and cannot trip cPHulk.
+- **`npm run docs:params`** script.
+
+### Fixed
+
+- **Plain hyphens throughout tool descriptions, slash-command docs, changelog, and both package manifests.** 75 em-dashes replaced, all in a clause-separator role.
+- **README corrections.** Sensitive-param POST routing was described as a pattern match; it is an exact match on the lowercased key against a fixed set of 11 names, so a param such as `new_password` or `ssl_key` is not covered and would appear in a GET query string. Every curated tool uses names from the list, so this only applies to `uapi_call`. The README also implied `uapi_call` could reach anything, when it is UAPI-only and API 2 has no generic caller. A 404'd cPanel docs link was replaced, and the confirm-gated tool list corrected from one entry to the actual five.
+- **README additions**: docs-site page table, requirements, error-code table, slash-command table, the full write-tool path guard list, and the bare-filename rule.
+
 ## 0.4.1 - 2026-07-26
 
 Dependency hygiene. No runtime behavior changes; all 50 tests pass unchanged.
