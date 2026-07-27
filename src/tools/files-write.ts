@@ -194,8 +194,8 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
     {
       description: 'Move/rename files. Wraps API2 Fileman::fileop (op=move).',
       inputSchema: {
-        source_dir: z.string(),
-        dest_dir: z.string(),
+        source_dir: z.string().describe('Absolute directory the files currently live in.'),
+        dest_dir: z.string().describe('Absolute destination directory. Must already exist.'),
         files: z.union([z.string(), z.array(z.string())]).describe('Filename(s) within source_dir.'),
       },
     },
@@ -230,9 +230,9 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
     {
       description: 'Copy files. Wraps API2 Fileman::fileop (op=copy).',
       inputSchema: {
-        source_dir: z.string(),
-        dest_dir: z.string(),
-        files: z.union([z.string(), z.array(z.string())]),
+        source_dir: z.string().describe('Absolute directory the files currently live in.'),
+        dest_dir: z.string().describe('Absolute destination directory. Must already exist.'),
+        files: z.union([z.string(), z.array(z.string())]).describe('Filename(s) within source_dir.'),
       },
     },
     async ({ source_dir, dest_dir, files }) => {
@@ -266,8 +266,8 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
     {
       description: 'Change permissions on files. Wraps API2 Fileman::fileop (op=chmod).',
       inputSchema: {
-        dir: z.string(),
-        files: z.union([z.string(), z.array(z.string())]),
+        dir: z.string().describe('Absolute directory containing the target files.'),
+        files: z.union([z.string(), z.array(z.string())]).describe('Filename(s) within dir.'),
         permissions: z.string().describe('Octal string, e.g. "0755" or "0644".'),
       },
     },

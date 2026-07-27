@@ -30,10 +30,13 @@ export function registerCronTools(server: McpServer, getClient: GetClient): void
       inputSchema: {
         command: z.string().describe('Shell command to run.'),
         minute: z.string().default('*').describe('Cron minute field. Default "*".'),
-        hour: z.string().default('*'),
-        day: z.string().default('*'),
-        month: z.string().default('*'),
-        weekday: z.string().default('*'),
+        hour: z.string().default('*').describe('Cron hour field (0-23). Default "*".'),
+        day: z.string().default('*').describe('Cron day-of-month field (1-31). Default "*".'),
+        month: z.string().default('*').describe('Cron month field (1-12). Default "*".'),
+        weekday: z
+          .string()
+          .default('*')
+          .describe('Cron day-of-week field (0-6, Sunday is 0). Default "*".'),
       },
     },
     async ({ command, minute, hour, day, month, weekday }) => {

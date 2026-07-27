@@ -74,6 +74,8 @@ A pre-0.3 `~/.config/cpanel-mcp/.env` is migrated to `profiles/default.env` auto
 
 ## Tool catalog
 
+Names only below. For each tool's input parameters - names, types, which are required - see the **[parameter reference](https://ringo380.github.io/claude-cpanel-mcp/parameters/)**, generated from the live tool schemas.
+
 ### Auth and setup
 
 `setup`, `auth_status`, `auth_test`, `auth_rotate_token`, `auth_list_profiles`, `auth_switch_profile`, `auth_delete_profile`, `auth_open_token_page`, `whoami`

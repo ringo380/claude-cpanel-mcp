@@ -19,7 +19,8 @@
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docs:params": "node scripts/gen-params.mjs"
   },
   "keywords": [
     "cpanel",

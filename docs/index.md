@@ -14,6 +14,7 @@ MCP server for the cPanel UAPI, distributed as a Claude Code plugin. Manage emai
 
 - **[Setup and authentication]({{ site.baseurl }}/setup/)** - creating a cPanel API token, credential profiles, environment variables.
 - **[Tool reference]({{ site.baseurl }}/tools/)** - all 74 tools, grouped by family, with the UAPI call each one wraps.
+- **[Parameter reference]({{ site.baseurl }}/parameters/)** - every input parameter for every tool, with type, whether it is required, and what it means.
 - **[Troubleshooting]({{ site.baseurl }}/troubleshooting/)** - cPHulk lockouts, auth failures, TLS problems, common error codes.
 - **[Development]({{ site.baseurl }}/development/)** - building, testing, the design invariants, and the release flow.
 

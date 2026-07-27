@@ -49,7 +49,9 @@ export function registerDnsTools(server: McpServer, getClient: GetClient): void 
       inputSchema: {
         domain: z.string().describe('Zone, e.g. "example.com".'),
         name: z.string().describe('Record name (subdomain). Use "@" or the zone name itself for apex.'),
-        type: z.enum(['A', 'AAAA', 'CNAME', 'TXT', 'MX', 'SRV', 'NS', 'CAA']),
+        type: z
+          .enum(['A', 'AAAA', 'CNAME', 'TXT', 'MX', 'SRV', 'NS', 'CAA'])
+          .describe('Record type.'),
         address: z.string().describe('Record value (IP for A/AAAA, target hostname for CNAME/MX, text for TXT, etc.).'),
         ttl: z.number().optional().describe('TTL in seconds. Defaults to 14400.'),
         priority: z.number().optional().describe('MX/SRV priority.'),
@@ -79,12 +81,15 @@ export function registerDnsTools(server: McpServer, getClient: GetClient): void 
     {
       description: 'Edit an existing DNS record by line number. Use dns_get_zone_records first to find the line. Wraps ZoneEdit::edit_zone_record.',
       inputSchema: {
-        domain: z.string(),
+        domain: z.string().describe('Zone the record belongs to, e.g. "example.com".'),
         line: z.number().describe('Line number of the record in the zone (from dns_get_zone_records).'),
-        name: z.string().optional(),
-        type: z.string().optional(),
-        address: z.string().optional(),
-        ttl: z.number().optional(),
+        name: z.string().optional().describe('New record name (subdomain). Omit to leave unchanged.'),
+        type: z
+          .string()
+          .optional()
+          .describe('New record type, e.g. "A" or "CNAME". Omit to leave unchanged.'),
+        address: z.string().optional().describe('New record value. Omit to leave unchanged.'),
+        ttl: z.number().optional().describe('New TTL in seconds. Omit to leave unchanged.'),
       },
     },
     async ({ domain, line, name, type, address, ttl }) => {
@@ -112,7 +117,7 @@ export function registerDnsTools(server: McpServer, getClient: GetClient): void 
     {
       description: 'Remove a DNS record by line number. Wraps ZoneEdit::remove_zone_record.',
       inputSchema: {
-        domain: z.string(),
+        domain: z.string().describe('Zone the record belongs to, e.g. "example.com".'),
         line: z.number().describe('Line number of the record to remove.'),
       },
     },

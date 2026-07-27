@@ -199,10 +199,10 @@ export function registerSetupTools(
         'AUTH_FAILED, NETWORK_ERROR, etc.) on failure.',
       inputSchema: {
         host: z.string().describe('cPanel hostname or IP. Do NOT include https:// or port.'),
-        user: z.string(),
+        user: z.string().describe('cPanel username to validate.'),
         api_key: z.string().describe('cPanel API token to test.'),
         port: z.number().optional().describe('Defaults to 2083.'),
-        insecure_tls: z.boolean().optional(),
+        insecure_tls: z.boolean().optional().describe('Skip TLS certificate verification. Only for a self-signed host you control.'),
       },
     },
     async ({ host, user, api_key, port, insecure_tls }) => {
@@ -435,7 +435,7 @@ export function registerSetupTools(
         'Delete a saved profile. Refuses to delete the active profile — switch first. ' +
         'Use cautiously; the on-disk credentials are removed immediately (no undo).',
       inputSchema: {
-        profile: z.string(),
+        profile: z.string().describe('Name of the saved profile to delete. Cannot be the active profile.'),
         confirm: z
           .boolean()
           .describe('Must be true. Guards against accidental deletion when a profile name is autocompleted.'),

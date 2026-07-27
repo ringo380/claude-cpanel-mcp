@@ -72,8 +72,8 @@ export function registerEmailTools(server: McpServer, getClient: GetClient): voi
     {
       description: 'Change an email account password. Wraps Email::passwd_pop.',
       inputSchema: {
-        email: z.string(),
-        domain: z.string(),
+        email: z.string().describe('Mailbox local part, e.g. "info" for info@example.com.'),
+        domain: z.string().describe('Domain the mailbox belongs to, e.g. "example.com".'),
         password: z.string().describe('New password.'),
       },
     },
@@ -135,7 +135,7 @@ export function registerEmailTools(server: McpServer, getClient: GetClient): voi
       description: 'Return disk usage for one mailbox. Wraps Email::get_disk_usage.',
       inputSchema: {
         user: z.string().describe('Local part of the mailbox.'),
-        domain: z.string(),
+        domain: z.string().describe('Domain the mailbox belongs to, e.g. "example.com".'),
       },
     },
     async ({ user, domain }) => {
@@ -177,7 +177,7 @@ export function registerEmailTools(server: McpServer, getClient: GetClient): voi
       inputSchema: {
         email: z.string().describe('Full email address, e.g. "info@example.com".'),
         from: z.string().describe('From-name shown to recipients.'),
-        subject: z.string(),
+        subject: z.string().describe('Subject line of the auto-reply.'),
         body: z.string().describe('Plain-text body. Use %subject% and %from% as placeholders.'),
         is_html: z.boolean().optional().describe('Set true for HTML body.'),
         interval: z.number().optional().describe('Hours between repeats to the same sender (default 0).'),
@@ -253,7 +253,7 @@ export function registerEmailTools(server: McpServer, getClient: GetClient): voi
     {
       description: 'Delete a mail filter by name. Wraps Email::delete_filter.',
       inputSchema: {
-        filtername: z.string(),
+        filtername: z.string().describe('Name of the filter to delete, as shown by email_list_filters.'),
         account: z.string().optional().describe('Full email address; omit for account-level filter.'),
       },
     },
@@ -275,7 +275,7 @@ export function registerEmailTools(server: McpServer, getClient: GetClient): voi
     {
       description: 'Add a forwarder that sends mail for one address to another. Wraps Email::add_forwarder.',
       inputSchema: {
-        domain: z.string(),
+        domain: z.string().describe('Domain the mailbox belongs to, e.g. "example.com".'),
         email: z.string().describe('Source address (local part).'),
         fwdemail: z.string().describe('Destination email address.'),
       },

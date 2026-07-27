@@ -36,8 +36,8 @@ export function registerFileTools(server: McpServer, getClient: GetClient): void
     {
       description: 'Get stat info for a single file. Wraps Fileman::get_file_information.',
       inputSchema: {
-        dir: z.string(),
-        file: z.string(),
+        dir: z.string().describe('Absolute directory path containing the file.'),
+        file: z.string().describe('File name within `dir`, not a full path.'),
       },
     },
     async ({ dir, file }) => {
@@ -56,8 +56,8 @@ export function registerFileTools(server: McpServer, getClient: GetClient): void
     {
       description: 'Read a small text file. Wraps Fileman::get_file_content. Do not use for binaries; UAPI returns the raw content inline.',
       inputSchema: {
-        dir: z.string(),
-        file: z.string(),
+        dir: z.string().describe('Absolute directory path containing the file.'),
+        file: z.string().describe('File name within `dir`, not a full path.'),
       },
     },
     async ({ dir, file }) => {

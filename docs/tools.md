@@ -10,6 +10,8 @@ description: All 74 cpanel-mcp tools, grouped by family, with the cPanel API cal
 
 74 tools. Every tool registers at server startup regardless of whether credentials are loaded; if nothing is configured, a call returns a structured "unconfigured" error rather than the tool vanishing from the list.
 
+This page is the catalog: what exists and what each tool wraps. For the input parameters of a specific tool - names, types, which are required - see the **[parameter reference]({{ site.baseurl }}/parameters/)**.
+
 Unless noted, tools wrap **UAPI** (`https://<host>:2083/execute/<Module>/<function>`). The file-mutation tools wrap **API 2** instead - see [Files](#files).
 
 Jump to: [Auth and setup](#auth-and-setup) &middot; [Discovery](#discovery-and-escape-hatch) &middot; [Email](#email) &middot; [DNS](#dns) &middot; [Files](#files) &middot; [MySQL](#mysql) &middot; [FTP](#ftp) &middot; [Domains](#domains) &middot; [SSL](#ssl) &middot; [Cron](#cron) &middot; [Backups](#backups-and-account)

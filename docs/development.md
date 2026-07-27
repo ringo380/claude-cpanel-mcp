@@ -23,6 +23,7 @@ Other scripts:
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Watch mode via `tsx`. |
+| `npm run docs:params` | Regenerate `docs/parameters.md` from the live tool schemas. Needs a current build. |
 | `npm run type-check` | `tsc --noEmit`. |
 | `npm start` | Run the built server from `dist/`. |
 | `npm run test:watch` | Vitest in watch mode. |
@@ -122,6 +123,7 @@ When adding a tool:
 - Guard with `getClient()` and return `unconfiguredResult()` when unconfigured.
 - Return errors through `asErrorContent(err)` so the structured `code` survives.
 - Name any secret-bearing param so it matches `SENSITIVE_PARAM_KEYS`, or add the key to that set - otherwise it goes out over GET and into the server's access log.
-- Add it to the [tool reference]({{ site.baseurl }}/tools/) and the README catalog.
+- Give **every** param a `.describe()`. It is what users see in the tool list, and `docs/parameters.md` is generated from it.
+- Add it to the [tool reference]({{ site.baseurl }}/tools/) and the README catalog, then run `npm run build && npm run docs:params` and commit the regenerated page.
 
 Never paste real credentials into tests, fixtures, issues, or pull requests.

@@ -18,7 +18,7 @@ export function registerSslTools(server, getClient) {
     server.registerTool('ssl_install_cert', {
         description: 'Install an SSL certificate on a domain. Wraps SSL::install_ssl.',
         inputSchema: {
-            domain: z.string(),
+            domain: z.string().describe('Domain to install the certificate on, e.g. "example.com".'),
             cert: z.string().describe('PEM-encoded certificate.'),
             key: z.string().describe('PEM-encoded private key.'),
             cabundle: z.string().optional().describe('PEM-encoded CA chain.'),
