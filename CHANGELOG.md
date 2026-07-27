@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.3 - 2026-07-27
+
+Fixes a first-run install failure that prevented the plugin from starting on a clean machine.
+
+### Fixed
+
+- **A fresh plugin install could not launch.** `package.json` ran `npm run build` from its `prepare` hook. npm runs `prepare` on any plain `npm install`, including the production install the plugin launcher performs on first run (`npm install --omit=dev`). With dev dependencies omitted there is no `typescript` and no `@types/node`, so `tsc` failed with `TS2688: Cannot find type definition file for 'node'` and npm exited 2. `hooks/scripts/launch-mcp.sh` checks that exit code, reported "npm install failed", and exited 1, so the MCP server never started - even though `dist/` ships in the package and was ready to run.
+
+  `prepare` now goes through `scripts/prepare.js`, which builds only when a local toolchain is actually present. A full developer `npm install` still builds automatically; a production install skips the build and uses the committed `dist/`. A genuine build failure is still propagated rather than swallowed.
+
+  Present since 0.1.0. Verified against a clean checkout: `npm install --omit=dev` exits 0, the launcher exits 0, and the server reports 74 tools.
+
 ## 0.4.2 - 2026-07-26
 
 Documentation release. No runtime behavior changes; all 50 tests pass unchanged and `npm audit` stays clean.
