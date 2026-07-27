@@ -28,7 +28,11 @@ export function registerSslTools(server: McpServer, getClient: GetClient): void 
     {
       description: 'Install an SSL certificate on a domain. Wraps SSL::install_ssl.',
       inputSchema: {
-        domain: z.string().describe('Domain to install the certificate on, e.g. "example.com".'),
+        domain: z
+          .string()
+          .describe(
+            'Domain to install the certificate on, e.g. "example.com". Must already be a domain on this account - see domains_list_all.',
+          ),
         cert: z.string().describe('PEM-encoded certificate.'),
         key: z.string().describe('PEM-encoded private key.'),
         cabundle: z.string().optional().describe('PEM-encoded CA chain.'),

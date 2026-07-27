@@ -194,9 +194,19 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
     {
       description: 'Move/rename files. Wraps API2 Fileman::fileop (op=move).',
       inputSchema: {
-        source_dir: z.string().describe('Absolute directory the files currently live in.'),
-        dest_dir: z.string().describe('Absolute destination directory. Must already exist.'),
-        files: z.union([z.string(), z.array(z.string())]).describe('Filename(s) within source_dir.'),
+        source_dir: z
+          .string()
+          .describe('Absolute path of the directory the files are currently in.'),
+        dest_dir: z
+          .string()
+          .describe(
+            'Absolute path of the destination directory. Create it first with files_create_directory if it does not exist yet.',
+          ),
+        files: z
+          .union([z.string(), z.array(z.string())])
+          .describe(
+            'File name, or list of file names, relative to source_dir. Bare names only - a path separator is rejected.',
+          ),
       },
     },
     async ({ source_dir, dest_dir, files }) => {
@@ -230,9 +240,19 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
     {
       description: 'Copy files. Wraps API2 Fileman::fileop (op=copy).',
       inputSchema: {
-        source_dir: z.string().describe('Absolute directory the files currently live in.'),
-        dest_dir: z.string().describe('Absolute destination directory. Must already exist.'),
-        files: z.union([z.string(), z.array(z.string())]).describe('Filename(s) within source_dir.'),
+        source_dir: z
+          .string()
+          .describe('Absolute path of the directory the files are currently in.'),
+        dest_dir: z
+          .string()
+          .describe(
+            'Absolute path of the destination directory. Create it first with files_create_directory if it does not exist yet.',
+          ),
+        files: z
+          .union([z.string(), z.array(z.string())])
+          .describe(
+            'File name, or list of file names, relative to source_dir. Bare names only - a path separator is rejected.',
+          ),
       },
     },
     async ({ source_dir, dest_dir, files }) => {
@@ -266,9 +286,15 @@ export function registerFileWriteTools(server: McpServer, getClient: GetClient):
     {
       description: 'Change permissions on files. Wraps API2 Fileman::fileop (op=chmod).',
       inputSchema: {
-        dir: z.string().describe('Absolute directory containing the target files.'),
-        files: z.union([z.string(), z.array(z.string())]).describe('Filename(s) within dir.'),
-        permissions: z.string().describe('Octal string, e.g. "0755" or "0644".'),
+        dir: z.string().describe('Absolute path of the directory containing the target files.'),
+        files: z
+          .union([z.string(), z.array(z.string())])
+          .describe(
+            'File name, or list of file names, relative to dir. Bare names only - a path separator is rejected.',
+          ),
+        permissions: z
+          .string()
+          .describe('Octal permissions as a string, e.g. "0755" for a directory or "0644" for a file.'),
       },
     },
     async ({ dir, files, permissions }) => {

@@ -24,7 +24,7 @@ Delete a saved profile. Refuses to delete the active profile - switch first. Use
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `profile` | string | yes | Name of the saved profile to delete. Cannot be the active profile. |
+| `profile` | string | yes | Name of the profile to delete, as listed by auth_list_profiles. Cannot be the active profile - switch with auth_switch_profile first. |
 | `confirm` | boolean | yes | Must be true. Guards against accidental deletion when a profile name is autocompleted. |
 
 ### `auth_list_profiles`
@@ -72,10 +72,10 @@ Dry-run credential validation against cPanel UAPI without writing anything to di
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `host` | string | yes | cPanel hostname or IP. Do NOT include https:// or port. |
-| `user` | string | yes | cPanel username to validate. |
-| `api_key` | string | yes | cPanel API token to test. |
+| `user` | string | yes | cPanel username to validate. Not an email address and not the domain. |
+| `api_key` | string | yes | cPanel API token to test. Sent as an Authorization header, never in a URL. |
 | `port` | number | no | Defaults to 2083. |
-| `insecure_tls` | boolean | no | Skip TLS certificate verification. Only for a self-signed host you control. |
+| `insecure_tls` | boolean | no | Skip TLS certificate verification. Only for a self-signed host you control - it leaves the API token exposed to anyone able to intercept the connection. |
 
 ### `setup`
 
@@ -144,7 +144,7 @@ Add or update an autoresponder for an email address. Wraps Email::add_auto_respo
 | --- | --- | --- | --- |
 | `email` | string | yes | Full email address, e.g. "info@example.com". |
 | `from` | string | yes | From-name shown to recipients. |
-| `subject` | string | yes | Subject line of the auto-reply. |
+| `subject` | string | yes | Subject line used on the auto-reply itself. |
 | `body` | string | yes | Plain-text body. Use %subject% and %from% as placeholders. |
 | `is_html` | boolean | no | Set true for HTML body. |
 | `interval` | number | no | Hours between repeats to the same sender (default 0). |
@@ -158,9 +158,9 @@ Add a forwarder that sends mail for one address to another. Wraps Email::add_for
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `domain` | string | yes | Domain the mailbox belongs to, e.g. "example.com". |
-| `email` | string | yes | Source address (local part). |
-| `fwdemail` | string | yes | Destination email address. |
+| `domain` | string | yes | Domain of the address being forwarded, e.g. "example.com". |
+| `email` | string | yes | Local part of the source address, e.g. "sales" to forward sales@<domain>. Does not have to be an existing mailbox - cPanel will forward for an address that has no inbox. |
+| `fwdemail` | string | yes | Full destination address mail is delivered to, e.g. "owner@elsewhere.com". |
 
 ### `email_change_password`
 
@@ -168,9 +168,9 @@ Change an email account password. Wraps Email::passwd_pop.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `email` | string | yes | Mailbox local part, e.g. "info" for info@example.com. |
+| `email` | string | yes | Mailbox local part only, e.g. "info" for info@example.com. Not the full address. |
 | `domain` | string | yes | Domain the mailbox belongs to, e.g. "example.com". |
-| `password` | string | yes | New password. |
+| `password` | string | yes | New password. Routed via POST, so it never reaches the cPanel access log. |
 
 ### `email_delete_account`
 
@@ -195,7 +195,7 @@ Delete a mail filter by name. Wraps Email::delete_filter.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `filtername` | string | yes | Name of the filter to delete, as shown by email_list_filters. |
+| `filtername` | string | yes | Filter name exactly as returned by email_list_filters. |
 | `account` | string | no | Full email address; omit for account-level filter. |
 
 ### `email_delete_forwarder`
@@ -213,7 +213,7 @@ Return disk usage for one mailbox. Wraps Email::get_disk_usage.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `user` | string | yes | Local part of the mailbox. |
+| `user` | string | yes | Mailbox local part only, e.g. "info" for info@example.com. Not the full address. |
 | `domain` | string | yes | Domain the mailbox belongs to, e.g. "example.com". |
 
 ### `email_list_accounts`
@@ -305,9 +305,9 @@ Change permissions on files. Wraps API2 Fileman::fileop (op=chmod).
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `dir` | string | yes | Absolute directory containing the target files. |
-| `files` | string or array of string | yes | Filename(s) within dir. |
-| `permissions` | string | yes | Octal string, e.g. "0755" or "0644". |
+| `dir` | string | yes | Absolute path of the directory containing the target files. |
+| `files` | string or array of string | yes | File name, or list of file names, relative to dir. Bare names only - a path separator is rejected. |
+| `permissions` | string | yes | Octal permissions as a string, e.g. "0755" for a directory or "0644" for a file. |
 
 ### `files_compress`
 
@@ -325,9 +325,9 @@ Copy files. Wraps API2 Fileman::fileop (op=copy).
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `source_dir` | string | yes | Absolute directory the files currently live in. |
-| `dest_dir` | string | yes | Absolute destination directory. Must already exist. |
-| `files` | string or array of string | yes | Filename(s) within source_dir. |
+| `source_dir` | string | yes | Absolute path of the directory the files are currently in. |
+| `dest_dir` | string | yes | Absolute path of the destination directory. Create it first with files_create_directory if it does not exist yet. |
+| `files` | string or array of string | yes | File name, or list of file names, relative to source_dir. Bare names only - a path separator is rejected. |
 
 ### `files_create_directory`
 
@@ -370,8 +370,8 @@ Get stat info for a single file. Wraps Fileman::get_file_information.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `dir` | string | yes | Absolute directory path containing the file. |
-| `file` | string | yes | File name within `dir`, not a full path. |
+| `dir` | string | yes | Absolute path of the containing directory, e.g. "/home/<user>/public_html". |
+| `file` | string | yes | File name on its own, relative to `dir`. Do not pass a full path here. |
 
 ### `files_list_dir`
 
@@ -388,9 +388,9 @@ Move/rename files. Wraps API2 Fileman::fileop (op=move).
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `source_dir` | string | yes | Absolute directory the files currently live in. |
-| `dest_dir` | string | yes | Absolute destination directory. Must already exist. |
-| `files` | string or array of string | yes | Filename(s) within source_dir. |
+| `source_dir` | string | yes | Absolute path of the directory the files are currently in. |
+| `dest_dir` | string | yes | Absolute path of the destination directory. Create it first with files_create_directory if it does not exist yet. |
+| `files` | string or array of string | yes | File name, or list of file names, relative to source_dir. Bare names only - a path separator is rejected. |
 
 ### `files_read_file`
 
@@ -398,8 +398,8 @@ Read a small text file. Wraps Fileman::get_file_content. Do not use for binaries
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `dir` | string | yes | Absolute directory path containing the file. |
-| `file` | string | yes | File name within `dir`, not a full path. |
+| `dir` | string | yes | Absolute path of the containing directory, e.g. "/home/<user>/public_html". |
+| `file` | string | yes | File name on its own, relative to `dir`. Do not pass a full path here. |
 
 ### `files_write_file`
 
@@ -438,8 +438,8 @@ Create a MySQL user. cPanel will prefix the name. Wraps Mysql::create_user.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `name` | string | yes | User name without the cPanel prefix; cPanel prepends <cpanel_user>_. |
-| `password` | string | yes | Password for the new user. Sent via POST so it stays out of the access log. |
+| `name` | string | yes | Bare user name, without the cPanel prefix - cPanel prepends "<cpanel_user>_" itself. Every other MySQL tool wants the full prefixed name as shown by mysql_list_users. |
+| `password` | string | yes | Password for the new user. Routed via POST, so it never reaches the cPanel access log. |
 
 ### `mysql_delete_database`
 
@@ -623,7 +623,7 @@ Install an SSL certificate on a domain. Wraps SSL::install_ssl.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `domain` | string | yes | Domain to install the certificate on, e.g. "example.com". |
+| `domain` | string | yes | Domain to install the certificate on, e.g. "example.com". Must already be a domain on this account - see domains_list_all. |
 | `cert` | string | yes | PEM-encoded certificate. |
 | `key` | string | yes | PEM-encoded private key. |
 | `cabundle` | string | no | PEM-encoded CA chain. |

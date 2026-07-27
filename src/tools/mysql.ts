@@ -64,8 +64,15 @@ export function registerMysqlTools(server: McpServer, getClient: GetClient): voi
     {
       description: 'Create a MySQL user. cPanel will prefix the name. Wraps Mysql::create_user.',
       inputSchema: {
-        name: z.string().describe('User name without the cPanel prefix; cPanel prepends <cpanel_user>_.'),
-        password: z.string().describe('Password for the new user. Sent via POST so it stays out of the access log.'),
+        name: z
+          .string()
+          .describe(
+            'Bare user name, without the cPanel prefix - cPanel prepends "<cpanel_user>_" itself. ' +
+              'Every other MySQL tool wants the full prefixed name as shown by mysql_list_users.',
+          ),
+        password: z
+          .string()
+          .describe('Password for the new user. Routed via POST, so it never reaches the cPanel access log.'),
       },
     },
     async ({ name, password }) => {

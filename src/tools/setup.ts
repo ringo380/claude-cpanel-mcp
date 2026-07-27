@@ -199,10 +199,19 @@ export function registerSetupTools(
         'AUTH_FAILED, NETWORK_ERROR, etc.) on failure.',
       inputSchema: {
         host: z.string().describe('cPanel hostname or IP. Do NOT include https:// or port.'),
-        user: z.string().describe('cPanel username to validate.'),
-        api_key: z.string().describe('cPanel API token to test.'),
+        user: z
+          .string()
+          .describe('cPanel username to validate. Not an email address and not the domain.'),
+        api_key: z
+          .string()
+          .describe('cPanel API token to test. Sent as an Authorization header, never in a URL.'),
         port: z.number().optional().describe('Defaults to 2083.'),
-        insecure_tls: z.boolean().optional().describe('Skip TLS certificate verification. Only for a self-signed host you control.'),
+        insecure_tls: z
+          .boolean()
+          .optional()
+          .describe(
+            'Skip TLS certificate verification. Only for a self-signed host you control - it leaves the API token exposed to anyone able to intercept the connection.',
+          ),
       },
     },
     async ({ host, user, api_key, port, insecure_tls }) => {
@@ -435,7 +444,11 @@ export function registerSetupTools(
         'Delete a saved profile. Refuses to delete the active profile — switch first. ' +
         'Use cautiously; the on-disk credentials are removed immediately (no undo).',
       inputSchema: {
-        profile: z.string().describe('Name of the saved profile to delete. Cannot be the active profile.'),
+        profile: z
+          .string()
+          .describe(
+            'Name of the profile to delete, as listed by auth_list_profiles. Cannot be the active profile - switch with auth_switch_profile first.',
+          ),
         confirm: z
           .boolean()
           .describe('Must be true. Guards against accidental deletion when a profile name is autocompleted.'),

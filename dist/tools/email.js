@@ -54,9 +54,11 @@ export function registerEmailTools(server, getClient) {
     server.registerTool('email_change_password', {
         description: 'Change an email account password. Wraps Email::passwd_pop.',
         inputSchema: {
-            email: z.string().describe('Mailbox local part, e.g. "info" for info@example.com.'),
+            email: z
+                .string()
+                .describe('Mailbox local part only, e.g. "info" for info@example.com. Not the full address.'),
             domain: z.string().describe('Domain the mailbox belongs to, e.g. "example.com".'),
-            password: z.string().describe('New password.'),
+            password: z.string().describe('New password. Routed via POST, so it never reaches the cPanel access log.'),
         },
     }, async ({ email, domain, password }) => {
         const client = getClient();
@@ -105,7 +107,9 @@ export function registerEmailTools(server, getClient) {
     server.registerTool('email_get_disk_usage', {
         description: 'Return disk usage for one mailbox. Wraps Email::get_disk_usage.',
         inputSchema: {
-            user: z.string().describe('Local part of the mailbox.'),
+            user: z
+                .string()
+                .describe('Mailbox local part only, e.g. "info" for info@example.com. Not the full address.'),
             domain: z.string().describe('Domain the mailbox belongs to, e.g. "example.com".'),
         },
     }, async ({ user, domain }) => {
@@ -141,7 +145,7 @@ export function registerEmailTools(server, getClient) {
         inputSchema: {
             email: z.string().describe('Full email address, e.g. "info@example.com".'),
             from: z.string().describe('From-name shown to recipients.'),
-            subject: z.string().describe('Subject line of the auto-reply.'),
+            subject: z.string().describe('Subject line used on the auto-reply itself.'),
             body: z.string().describe('Plain-text body. Use %subject% and %from% as placeholders.'),
             is_html: z.boolean().optional().describe('Set true for HTML body.'),
             interval: z.number().optional().describe('Hours between repeats to the same sender (default 0).'),
@@ -205,7 +209,9 @@ export function registerEmailTools(server, getClient) {
     server.registerTool('email_delete_filter', {
         description: 'Delete a mail filter by name. Wraps Email::delete_filter.',
         inputSchema: {
-            filtername: z.string().describe('Name of the filter to delete, as shown by email_list_filters.'),
+            filtername: z
+                .string()
+                .describe('Filter name exactly as returned by email_list_filters.'),
             account: z.string().optional().describe('Full email address; omit for account-level filter.'),
         },
     }, async ({ filtername, account }) => {
@@ -222,9 +228,14 @@ export function registerEmailTools(server, getClient) {
     server.registerTool('email_add_forwarder', {
         description: 'Add a forwarder that sends mail for one address to another. Wraps Email::add_forwarder.',
         inputSchema: {
-            domain: z.string().describe('Domain the mailbox belongs to, e.g. "example.com".'),
-            email: z.string().describe('Source address (local part).'),
-            fwdemail: z.string().describe('Destination email address.'),
+            domain: z
+                .string()
+                .describe('Domain of the address being forwarded, e.g. "example.com".'),
+            email: z
+                .string()
+                .describe('Local part of the source address, e.g. "sales" to forward sales@<domain>. ' +
+                'Does not have to be an existing mailbox - cPanel will forward for an address that has no inbox.'),
+            fwdemail: z.string().describe('Full destination address mail is delivered to, e.g. "owner@elsewhere.com".'),
         },
     }, async ({ domain, email, fwdemail }) => {
         const client = getClient();
