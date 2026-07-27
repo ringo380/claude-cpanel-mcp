@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.1 - 2026-07-26
+
+Dependency hygiene. No runtime behavior changes; all 50 tests pass unchanged.
+
+Closes the 6 high, 2 moderate, and 2 low severity advisories `npm audit` reported on the default branch. `npm audit` is now clean.
+
+### Security
+
+- **`axios` 1.16.1 -> 1.18.1.** Ten advisories, the most relevant being prototype pollution in request construction and auth subfields, `formDataToJSON` recursion DoS, and `maxBodyLength` bypasses. axios is the entire HTTP layer in `src/cpanel-client.ts` and carries the cPanel API token on every request, so this was the priority fix.
+- **`form-data` 4.0.5 -> 4.0.6** (transitive via axios). CRLF injection via unescaped multipart field names. This sits in the same request path, since sensitive params are deliberately sent as POST form bodies.
+- **`vitest` 4.1.6 -> 4.1.10**, pulling `vite` 8.1.5 and `postcss` 8.5.23. Dev-only.
+
+### Added
+
+- **`overrides` block in `package.json`** for `@hono/node-server`, `body-parser`, `esbuild`, `fast-uri`, and `hono`. All five are transitive dependencies of `@modelcontextprotocol/sdk`, which is already at its latest release (1.29.0) and still resolves vulnerable versions, so a direct bump could not reach them.
+
+  These packages back the SDK's **HTTP** transports. This server is stdio-only, so none of them are on its runtime path. `@hono/node-server` is pinned across a major version (1.19.14 -> 2.0.12); the stdio server was verified end to end afterwards - a raw JSON-RPC `initialize` plus `tools/list` against `dist/index.js` returns all 74 tools.
+
+### Unaffected
+
+`@modelcontextprotocol/sdk` and `zod` are unchanged. The pinned invariants were re-verified explicitly on the new axios: `validateStatus: () => true`, POST routing for sensitive params on both the UAPI and API 2 paths, the API 2 `event.result` string/number coercion, and the single-attempt cPHulk dispatch.
+
 ## 0.4.0 — 2026-05-21
 
 Fix the file-mutation tools, which wrapped UAPI `Fileman` functions that do not exist. cPanel's UAPI `Fileman` module is read/utility only; file mutations live in **API 2 `Fileman::fileop`**. All six affected tools now route through API 2.
