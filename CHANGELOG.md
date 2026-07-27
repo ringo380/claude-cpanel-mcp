@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.4 - 2026-07-27
+
+Closes the two coverage gaps that let the 0.4.0 and 0.4.3 bugs ship. Both new checks were verified by reintroducing the original bug and confirming they fail.
+
+### Added
+
+- **`list_functions` now covers 11 functions the plugin itself calls.** `Email::delete_auto_responder`, `delete_filter`, `get_disk_usage`, `list_filters`; `Fileman::mkdir`; `Ftp::set_quota`, `server_name`, `get_port`; `Mysql::rename_database`, `set_password`, `revoke_access_to_database`. These were working endpoints missing from the discovery catalog, so `list_functions` omitted capabilities this plugin ships tools for.
+- **A static catalog cross-check** (`tests/catalog-coverage.test.ts`). Every `client.call` site in `src/tools/` is checked against the module catalog, and every `client.callApi2` site against a small explicit allowlist. This guards a failure mode unit tests structurally cannot see: a tool can carry a valid schema, register cleanly, appear in `tools/list`, and pass every test while calling a UAPI function that does not exist. Run against 0.3.1 it flags `Fileman::delete_files`, `move_files`, `copy_files`, `chmod`, `compress_files`, and `extract` - exactly the endpoints the 0.4.0 fix had to re-point at API 2. Fully static: no network, no credentials, no cPHulk exposure.
+- **`npm run test:install`**, fresh-install verification (`scripts/verify-install.sh`). Exports `git archive HEAD` to a scratch directory, runs `hooks/scripts/launch-mcp.sh` against it exactly as a new user's machine would, and asserts the server starts and advertises the expected tool count. Every other check runs against a developer tree that already has `node_modules`, which is precisely the condition that hid the 0.4.3 bug for five releases. Kept out of `npm test` because a real install takes tens of seconds, and it skips with a clear message when the npm registry is unreachable. Makes no cPanel contact.
+
+### Fixed
+
+- **The `Fileman` catalog entry claimed capabilities UAPI does not have.** It advertised compress, extract, and chmod, none of which exist in UAPI `Fileman` - the exact misreading behind the 0.4.0 bug. It now states plainly that UAPI `Fileman` is read/utility only and that delete, move, copy, chmod, compress, and extract are API 2 `Fileman::fileop`, which `uapi_call` cannot reach.
+
 ## 0.4.3 - 2026-07-27
 
 Fixes a first-run install failure that prevented the plugin from starting on a clean machine.

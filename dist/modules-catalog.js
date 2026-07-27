@@ -21,8 +21,12 @@ export const MODULES = [
             { name: 'list_forwarders', description: 'List email forwarders.' },
             { name: 'add_forwarder', description: 'Add a forwarder. Params: domain, email, fwdopt, fwdemail.' },
             { name: 'delete_forwarder', description: 'Remove a forwarder. Params: address, forwarder.' },
-            { name: 'list_auto_responders', description: 'List autoresponders.' },
-            { name: 'add_auto_responder', description: 'Configure an autoresponder.' },
+            { name: 'list_auto_responders', description: 'List autoresponders. Params: domain (optional).' },
+            { name: 'add_auto_responder', description: 'Configure an autoresponder. Params: email, from, subject, body, is_html, interval, start, stop, charset.' },
+            { name: 'delete_auto_responder', description: 'Remove an autoresponder. Params: email.' },
+            { name: 'list_filters', description: 'List mail filters. Params: account (optional; omit for account-level filters).' },
+            { name: 'delete_filter', description: 'Delete a mail filter by name. Params: filtername, account (optional).' },
+            { name: 'get_disk_usage', description: 'Mailbox disk usage for one account. Params: user, domain.' },
         ],
     },
     {
@@ -45,12 +49,15 @@ export const MODULES = [
     },
     {
         name: 'Fileman',
-        description: 'Filesystem operations: list, read, write, compress, extract, chmod.',
+        description: 'Filesystem reads, writes, and directory creation. Note: in UAPI, Fileman is read/utility only - ' +
+            'delete, move, copy, chmod, compress, and extract do NOT exist here. Those are API 2 Fileman::fileop, ' +
+            'which the files_* tools use directly and which uapi_call cannot reach.',
         functions: [
             { name: 'list_files', description: 'List directory contents. Params: dir, show_hidden, types.' },
             { name: 'get_file_information', description: 'Stat a file. Params: dir, file.' },
             { name: 'get_file_content', description: 'Read a small file. Params: dir, file.' },
             { name: 'save_file_content', description: 'Write a file. Params: dir, file, content, charset.' },
+            { name: 'mkdir', description: 'Create a directory. Params: path, name, permissions (optional octal).' },
         ],
     },
     {
@@ -64,6 +71,9 @@ export const MODULES = [
             { name: 'create_user', description: 'Create a MySQL user. Params: name, password.' },
             { name: 'delete_user', description: 'Delete a MySQL user. Params: name.' },
             { name: 'set_privileges_on_database', description: 'Grant privileges. Params: user, database, privileges.' },
+            { name: 'revoke_access_to_database', description: 'Revoke all of a user\'s privileges on one database. Params: user, database.' },
+            { name: 'set_password', description: 'Change a MySQL user password. Params: user, password.' },
+            { name: 'rename_database', description: 'Rename a database. Params: oldname, newname.' },
         ],
     },
     {
@@ -135,6 +145,9 @@ export const MODULES = [
             { name: 'add_ftp', description: 'Create FTP account. Params: user, pass, quota, homedir.' },
             { name: 'delete_ftp', description: 'Delete FTP account. Params: user.' },
             { name: 'passwd', description: 'Change FTP password. Params: user, pass.' },
+            { name: 'set_quota', description: 'Change an FTP account quota in MB. Params: user, quota (0 = unlimited).' },
+            { name: 'server_name', description: 'FTP server hostname. No params.' },
+            { name: 'get_port', description: 'FTP server port. No params.' },
         ],
     },
     {

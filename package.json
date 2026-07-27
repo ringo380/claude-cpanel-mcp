@@ -1,6 +1,6 @@
 {
   "name": "@ringo380/cpanel-mcp",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "MCP server for the cPanel UAPI - manage email, DNS, files, MySQL, SSL, cron, subdomains, and more on shared cPanel hosting",
   "type": "module",
   "main": "dist/index.js",
@@ -20,7 +20,8 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "docs:params": "node scripts/gen-params.mjs"
+    "docs:params": "node scripts/gen-params.mjs",
+    "test:install": "sh scripts/verify-install.sh"
   },
   "keywords": [
     "cpanel",

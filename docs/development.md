@@ -15,7 +15,7 @@ git clone https://github.com/ringo380/claude-cpanel-mcp.git
 cd claude-cpanel-mcp
 npm install
 npm run build        # tsc, then chmod +x the two bin entry points
-npm test             # vitest, 50 tests
+npm test             # vitest, 54 tests
 ```
 
 Other scripts:
@@ -25,6 +25,7 @@ Other scripts:
 | `npm run dev` | Watch mode via `tsx`. |
 | `npm run docs:params` | Regenerate `docs/parameters.md` from the live tool schemas. Needs a current build. |
 | `npm run type-check` | `tsc --noEmit`. |
+| `npm run test:install` | Fresh-install verification. Exports `git archive HEAD` to a scratch dir, runs the launcher against it, and asserts the server comes up with the expected tool count. Takes tens of seconds, so it is kept out of `npm test`. Skips with a clear message (exit 0) when the npm registry is unreachable. Makes no cPanel contact. |
 | `npm start` | Run the built server from `dist/`. |
 | `npm run test:watch` | Vitest in watch mode. |
 
@@ -107,9 +108,10 @@ curl -sS -o /dev/null -w "%{http_code}\n" \
 
 1. Bump the version in `package.json`, `.claude-plugin/plugin.json`, and add a `CHANGELOG.md` entry.
 2. `npm run build && npm test`.
-3. Commit, push, then tag: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
-4. Bump the `ref:` for this plugin in the [Robworks marketplace manifest](https://github.com/robworks-code/robworks-claude-code-plugins), commit and push.
-5. Consumers pick it up with `/plugin marketplace update`.
+3. Commit, then `npm run test:install` - it verifies the committed tree, so it must run after the commit, not before. This is the check that catches a plugin that cannot start on a clean machine; the unit suite structurally cannot see that class of bug.
+4. Push, then tag: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
+5. Bump the `ref:` for this plugin in the [Robworks marketplace manifest](https://github.com/robworks-code/robworks-claude-code-plugins), commit and push.
+6. Consumers pick it up with `/plugin marketplace update`.
 
 Ship a new patch tag rather than moving an existing one - a replaced tag leaves anyone who already installed that version silently on different code.
 
